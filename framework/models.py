@@ -292,3 +292,31 @@ def blank_run(model, mode: str, s=None) -> FrameworkRun:
         doc_gate=fam(_GATE_Q, "N"), context=fam(_CONTEXT_Q, None),
         readiness_defaults=fam(_READINESS_Q, d.readiness), steps=steps,
     )
+
+
+def load_answers(run: FrameworkRun, path) -> FrameworkRun:
+    """Apply a JSON file of {answer path: Answer dict} to a copy of `run`.
+
+    Dict families get the key created or replaced; r_move / accountability /
+    combine_with are set. Unknown step or family raises KeyError.
+    """
+    import json
+    from pathlib import Path
+
+    run = run.model_copy(deep=True)
+    for apath, raw in json.loads(Path(path).read_text()).items():
+        answer = Answer.model_validate(raw)
+        parts = apath.split(".")
+        if parts[0] in ("doc_gate", "context", "readiness_defaults") and len(parts) == 2:
+            getattr(run, parts[0])[parts[1]] = answer
+        elif parts[0] == "steps" and len(parts) >= 3:
+            step = run.steps[parts[1]]
+            if len(parts) == 4 and parts[2] in _STEP_DICTS:
+                getattr(step, parts[2])[parts[3]] = answer
+            elif len(parts) == 3 and parts[2] in _STEP_SINGLES:
+                setattr(step, parts[2], answer)
+            else:
+                raise KeyError(apath)
+        else:
+            raise KeyError(apath)
+    return run

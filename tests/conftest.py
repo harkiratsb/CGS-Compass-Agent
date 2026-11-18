@@ -49,3 +49,12 @@ def all_assumed_run(demo_model):
     from framework.models import blank_run
 
     return blank_run(demo_model, "fixture")
+
+
+@pytest.fixture
+def acceptance_run(demo_model, settings):
+    from framework.models import blank_run, load_answers
+    from framework.rules import apply_rules
+
+    run = load_answers(blank_run(demo_model, "fixture"), ROOT / "tests/fixtures/demo_answers.json")
+    return apply_rules(run, demo_model, settings)
