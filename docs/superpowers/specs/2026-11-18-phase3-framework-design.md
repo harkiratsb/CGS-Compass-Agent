@@ -203,6 +203,26 @@ output JSON, cached by input hash, with a replay file for the demo.
 | 11 | Draw | ⚙️ | Builds a future-state `ProcessModel` from the step table and renders it (section 9). |
 | 12 | Summary | ⚙️ + 🤖 | Code fills every number; AI writes the context paragraph and "first three actions" from the computed results only. |
 
+**What Stage 1 feeds in.** Every AI step gets the Stage 1 context below as evidence next to the transcripts. Stage 1
+quotes can be used directly as the quote on a `stated` answer. These are hints for the AI's judgment, not rules: code
+never turns a pain point into a call by itself.
+
+| Stage 1 output | Feeds |
+|---|---|
+| Pain points (category, step, frequency, quotes) | Part 2: delay → R4 (waiting), manual → R3 (re-keying), rework → R5 (fixes an earlier problem), ownership → R2 (handoff), missing-rule → R7 and the Rule clarity dial. Frequency → the volume and toil picture (step 3). Pain points on a step also go in the step table's reason when they decided a call. |
+| Open questions | Part 1 map checks (step 3) and follow-up questions |
+| Source discrepancies and reconciliation conflicts (`AgentRun`) | Part 1 map checks (alternatives drawn as a sequence, SOP/map mismatch) and R7 |
+| Verifier findings that were rejected | Part 1 map checks |
+| Handoffs | R2 (exists only for a handoff) |
+| Dependencies (system, approval, information) | D1/D3, Data and systems readiness, Governance readiness |
+| Tools + CGS tool list | Doc gate check 6, D1 (digital), D3 (findable), worksheet system, Data and systems readiness |
+| Step sizing: minutes, purpose, control_now, judgment_reason_stated | Worksheet minutes and type today; purpose = audit → accountability; judgment_reason_stated → Rule clarity |
+| step_type (deterministic / judgment) | Judgment dial |
+| Step notes, descriptions, assumptions | Doc gate check 8 (SOP detail), reasons |
+| Source coverage (how many sources back a step) | Confidence: a step backed by one source can't get H from the transcripts alone |
+
+Nothing from Stage 1 is left unused except the agent's internal checklist, which is already reflected in the findings.
+
 Batching: steps 4–7 and 10 each send the whole process in one call (adjacency and context matter), splitting by lane
 only if the output would not fit. Exact prompt wording is left to the builder; prompts must forbid making calls or
 applying thresholds and must require a quote for every `stated` answer.
