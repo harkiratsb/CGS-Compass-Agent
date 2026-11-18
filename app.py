@@ -25,6 +25,7 @@ if _env.exists():
 
 from schema import ProcessModel                       # noqa: E402
 from ingest.parse import parse_file                   # noqa: E402
+from project import ProjectError, load_project, parsed_files, save_project  # noqa: E402
 from ingest import drive                              # noqa: E402
 from ingest.agent import run_agent                   # noqa: E402
 from ingest.merge import dedupe_activities, source_coverage  # noqa: E402
@@ -68,20 +69,47 @@ ss.setdefault("model", None)
 ss.setdefault("mode", None)
 ss.setdefault("run", None)
 ss.setdefault("drive_files", [])
+ss.setdefault("map_reviewed", False)
+ss.setdefault("map_reviewed_toggle", False)
+ss.setdefault("framework", None)
+
+INTAKE_DEFAULTS = {'process_name': 'CGS Lead & Opportunity Management', 'process_owner': 'Director of Operations', 'process_scope': 'Lead identification through alignment on a discussion document. Proposal/SOW is a separate process.', 'account_id': 'ACC-0001', 'process_id': 'P-01', 'function_ref': '', 'extra_names': ''}
+for _k, _v in INTAKE_DEFAULTS.items():
+    ss.setdefault(_k, _v)
+DEFINITION_STATUSES = ["draft", "reviewed", "approved"]
+ss.setdefault("definition_status", "draft")
+INTAKE_KEYS = ["process_name", "process_owner", "process_scope", "account_id", "process_id",
+               "function_ref", "definition_status", "extra_names"]
 
 # ---------------------------------------------------------------- sidebar: intake
 with st.sidebar:
+    with st.expander("Open project"):
+        proj_up = st.file_uploader("Open a saved project (.json)", type=["json"], key="project_upload")
+        if proj_up is not None and ss.get("_opened_project") != (proj_up.name, proj_up.size):
+            try:
+                proj, proj_files = load_project(proj_up.getvalue().decode("utf-8"))
+            except (ProjectError, UnicodeDecodeError) as e:
+                st.error(str(e) if isinstance(e, ProjectError) else "This file is not a valid project file.")
+            else:
+                ss._opened_project = (proj_up.name, proj_up.size)
+                ss.files, ss.parsed = proj_files, parsed_files(proj_files)
+                ss.model, ss.run, ss.mode = proj.model, proj.run, proj.mode
+                ss.map_reviewed = ss["map_reviewed_toggle"] = proj.map_reviewed
+                ss.framework = proj.framework
+                for k in INTAKE_KEYS:
+                    if k in proj.intake and (k != "definition_status" or proj.intake[k] in DEFINITION_STATUSES):
+                        ss[k] = proj.intake[k]
+                st.success(f"Opened project ({len(proj_files)} file(s)).")
     st.subheader("1 · Process intake")
-    process_name = st.text_input("Process name", value="CGS Lead & Opportunity Management")
-    process_owner = st.text_input("Process owner", value="Director of Operations")
-    process_scope = st.text_area("Scope / context for the agent", height=80,
-                                 value="Lead identification through alignment on a discussion document. Proposal/SOW is a separate process.")
+    process_name = st.text_input("Process name", key="process_name")
+    process_owner = st.text_input("Process owner", key="process_owner")
+    process_scope = st.text_area("Scope / context for the agent", height=80, key="process_scope")
     with st.expander("Handoff details (for opportunity mapping)"):
-        account_id = st.text_input("Account ID", value="ACC-0001")
-        process_id = st.text_input("Process ID", value="P-01")
-        function_ref = st.text_input("Function ref", value="", help="CGS function reference, e.g. 3.1")
-        definition_status = st.selectbox("Definition status", ["draft", "reviewed", "approved"])
-        extra_names = st.text_input("Other names to remove", value="",
+        account_id = st.text_input("Account ID", key="account_id")
+        process_id = st.text_input("Process ID", key="process_id")
+        function_ref = st.text_input("Function ref", key="function_ref", help="CGS function reference, e.g. 3.1")
+        definition_status = st.selectbox("Definition status", key="definition_status", options=DEFINITION_STATUSES)
+        extra_names = st.text_input("Other names to remove", key="extra_names",
                                     help="People mentioned in the materials who are not speakers. Speaker names are "
                                          "removed automatically; these are replaced with [team member] too.")
     st.subheader("2 · Process materials")
@@ -136,6 +164,8 @@ STEP_ICON = {"code": "⚙️", "llm": "🤖"}
 
 if run:
     ss.model, ss.run = None, None
+    ss.map_reviewed, ss.framework = False, None
+    ss["map_reviewed_toggle"] = False
     with st.status("Running Stage 1 agent…", expanded=True) as status:
         st.write("⚙️ **Parse** — splitting files into chunks with source references")
         ss.parsed = [parse_file(n, b) for n, b in ss.files]
@@ -485,6 +515,16 @@ with tab_swim:
                             "connectors stay editable.")
     d3.download_button("⬇ Download model JSON", model.model_dump_json(indent=2), file_name="process_model.json",
                        mime="application/json", use_container_width=True)
+    s1, s2 = st.columns([1, 2])
+    ss.map_reviewed = s2.toggle("Mark map as reviewed", key="map_reviewed_toggle",
+                                help="Records that someone has checked this map against the source material.")
+    intake_now = {k: ss.get(k, "") for k in INTAKE_KEYS}
+    fw = ss.framework
+    s1.download_button("💾 Save project", save_project(
+        ss.files, intake_now, model, ss.run, ss.mode, ss.map_reviewed,
+        fw.model_dump() if hasattr(fw, "model_dump") else fw),
+        file_name="cgs_project.json", mime="application/json", use_container_width=True,
+        help="Saves the materials, the map, the agent run and your answers so you can pick up later.")
     # ---- edit in draw.io, then bring the edits back
     st.markdown("##### Edit in draw.io")
     e1, e2 = st.columns([1, 2])
