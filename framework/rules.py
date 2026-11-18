@@ -326,9 +326,25 @@ def follow_ups(run: FrameworkRun, order: list[str] | None = None) -> list[Follow
 _MEDIUM_FLAG = "doc confidence Medium"
 
 
-def _cap_m(a: Answer) -> None:
+_CAP_PREFIX = "confidence capped: "
+
+
+def _cap_m(a: Answer, why: str) -> None:
+    """Lower H to M and record the original level in a flag, so the next pass can undo it."""
     if a.confidence == "H":
+        a.flags.append(f"{_CAP_PREFIX}{why} (was {a.confidence})")
         a.confidence = "M"
+
+
+def _uncap(a: Answer) -> None:
+    """Restore the confidence a previous pass capped, and drop its cap flags."""
+    caps = [f for f in a.flags if f.startswith(_CAP_PREFIX)]
+    if not caps:
+        return
+    original = caps[0].rsplit("(was ", 1)[-1].rstrip(")")
+    if original in ("H", "M", "L"):
+        a.confidence = original
+    a.flags = [f for f in a.flags if not f.startswith(_CAP_PREFIX)]
 
 
 def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
@@ -349,11 +365,12 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
     # Medium: keep the values, flag them and cap confidence at M (flag is re-derived each pass)
     for st in run.steps.values():
         for _, a in _step_answers(st):
+            _uncap(a)
             if _MEDIUM_FLAG in a.flags:
                 a.flags = [f for f in a.flags if f != _MEDIUM_FLAG]
             if run.gate_band == "Medium" and a.basis != "answered":
                 a.flags.append(_MEDIUM_FLAG)
-                _cap_m(a)
+                _cap_m(a, "doc Medium")
 
     # single-source cap
     cov = source_coverage(model)
@@ -361,7 +378,12 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
         if cov.get(sid, 0) < 2:
             for _, a in _step_answers(st):
                 if a.basis == "stated" and not a.derived:
-                    _cap_m(a)
+                    _cap_m(a, "single source")
+
+    # steps no longer on the map keep no stale results
+    for sid, st in run.steps.items():
+        if sid not in facts.steps:
+            st.call = st.combine_target = st.tier = st.readiness_min = st.recommendation = None
 
     # Part 2
     for sid in ids:

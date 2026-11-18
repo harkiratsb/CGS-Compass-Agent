@@ -79,12 +79,60 @@ def test_apply_rules_is_pure(demo_model, all_assumed_run, settings):
     assert all_assumed_run.model_dump() == before and out is not all_assumed_run
 
 
+def _quoted(conf="H"):
+    return Answer(value=4, basis="stated", confidence=conf, quotes=[SourceRef(file="f", location="1", quote="q")])
+
+
 def test_single_source_caps_confidence(demo_model, all_assumed_run, settings):
     cov = source_coverage(demo_model)
     single = next(s for s in all_assumed_run.steps if cov.get(s, 0) < 2)
+    multi = next(s for s in all_assumed_run.steps if cov.get(s, 0) >= 2)
     run = all_assumed_run.model_copy(deep=True)
-    run.steps[single].dials["stakes"] = Answer(value=4, basis="stated", confidence="H", quotes=[SourceRef(file="f", location="1", quote="q")])
-    assert apply_rules(run, demo_model, settings).steps[single].dials["stakes"].confidence == "M"
+    for k in GATE_KEYS: run.doc_gate[k] = Answer(value="Y", basis="answered")
+    run.steps[single].dials["stakes"] = _quoted()
+    run.steps[multi].dials["stakes"] = _quoted()
+    out = apply_rules(run, demo_model, settings)
+    assert out.gate_band == "High"
+    assert out.steps[multi].dials["stakes"].confidence == "H"
+    assert out.steps[single].dials["stakes"].confidence == "M"
+    assert any(f.startswith("confidence capped: single source") for f in out.steps[single].dials["stakes"].flags)
+
+
+def test_medium_cap_undone_when_gate_rises(demo_model, all_assumed_run, settings):
+    run = _medium_run(all_assumed_run)
+    run.steps["A2"].dials["stakes"] = _quoted()
+    out = apply_rules(run, demo_model, settings)
+    assert out.gate_band == "Medium" and out.steps["A2"].dials["stakes"].confidence == "M"
+    for k in GATE_KEYS: out.doc_gate[k] = Answer(value="Y", basis="answered")
+    again = apply_rules(out, demo_model, settings)
+    stakes = again.steps["A2"].dials["stakes"]
+    assert again.gate_band == "High" and stakes.confidence == "H"
+    assert not any(f.startswith("confidence capped") or f == "doc confidence Medium" for f in stakes.flags)
+
+
+def test_caps_idempotent_on_rerun(demo_model, all_assumed_run, settings):
+    cov = source_coverage(demo_model)
+    single = next(s for s in all_assumed_run.steps if cov.get(s, 0) < 2)
+    run = _medium_run(all_assumed_run)
+    run.steps["A2"].dials["stakes"] = _quoted()
+    run.steps[single].dials["stakes"] = _quoted()
+    once = apply_rules(run, demo_model, settings)
+    twice = apply_rules(apply_rules(once, demo_model, settings), demo_model, settings)
+    assert twice.model_dump() == once.model_dump()
+    for sid in ("A2", single):
+        flags = twice.steps[sid].dials["stakes"].flags
+        assert len([f for f in flags if f.startswith("confidence capped")]) == 1
+
+
+def test_steps_off_the_map_are_cleared(demo_model, all_assumed_run, settings):
+    run = all_assumed_run.model_copy(deep=True)
+    run.steps["GONE"] = StepAssessment(step_id="GONE", worksheet={}, r_pass1={}, call="Remove",
+                                       tier=TierResult(standardize_first=False, tier="Rules", rule_fired=2),
+                                       recommendation=Recommendation(action="Remove", wave=0, harden_first=True))
+    out = apply_rules(run, demo_model, settings)
+    gone = out.steps["GONE"]
+    assert gone.call is gone.tier is gone.recommendation is gone.readiness_min is None
+    assert "GONE" not in out.waves[0]
 
 
 def _medium_run(all_assumed_run):
