@@ -72,8 +72,24 @@ ss.setdefault("drive_files", [])
 ss.setdefault("map_reviewed", False)
 ss.setdefault("map_reviewed_toggle", False)
 ss.setdefault("framework", None)
+if ss.pop("_reset_reviewed", False):   # the map changed after the toggle was drawn
+    ss.map_reviewed = ss["map_reviewed_toggle"] = False
 
-INTAKE_DEFAULTS = {'process_name': 'CGS Lead & Opportunity Management', 'process_owner': 'Director of Operations', 'process_scope': 'Lead identification through alignment on a discussion document. Proposal/SOW is a separate process.', 'account_id': 'ACC-0001', 'process_id': 'P-01', 'function_ref': '', 'extra_names': ''}
+
+def _reset_review_state():
+    ss.run, ss.framework, ss.map_reviewed = None, None, False
+    ss["map_reviewed_toggle"] = False
+
+INTAKE_DEFAULTS = {
+    "process_name": "CGS Lead & Opportunity Management",
+    "process_owner": "Director of Operations",
+    "process_scope": "Lead identification through alignment on a discussion document. "
+                     "Proposal/SOW is a separate process.",
+    "account_id": "ACC-0001",
+    "process_id": "P-01",
+    "function_ref": "",
+    "extra_names": "",
+}
 for _k, _v in INTAKE_DEFAULTS.items():
     ss.setdefault(_k, _v)
 DEFINITION_STATUSES = ["draft", "reviewed", "approved"]
@@ -133,6 +149,7 @@ with st.sidebar:
                     with st.spinner("Pulling files from Drive…"):
                         ss.files = [drive.fetch(f) for f in picked]
                     ss.model, ss.parsed = None, []
+                    _reset_review_state()
                     st.success(f"Imported {len(ss.files)} file(s)")
         else:
             st.caption("Drive import not configured — add `service_account.json` next to app.py "
@@ -144,11 +161,16 @@ with st.sidebar:
     c1, c2 = st.columns(2)
     if c1.button("Load demo materials", use_container_width=True):
         ss.files = [(p.name, p.read_bytes()) for p in sorted(DEMO_DIR.glob("*.md"))]
-        ss.model, ss.parsed = None, []
+        ss.model, ss.parsed, ss.mode = None, [], None
+        _reset_review_state()
     if c2.button("Clear", use_container_width=True):
         ss.files, ss.parsed, ss.model, ss.mode = [], [], None, None
-    if uploads:
+        _reset_review_state()
+    # only take the uploader's files when its contents change, so an opened project isn't overwritten
+    uploads_sig = tuple((u.name, u.size) for u in uploads or [])
+    if uploads and uploads_sig != ss.get("_uploads_sig"):
         ss.files = [(u.name, u.getvalue()) for u in uploads]
+    ss._uploads_sig = uploads_sig
     if ss.files:
         st.caption("Selected:")
         for n, b in ss.files:
@@ -467,6 +489,7 @@ with tab_model:
             n.sizing_basis.human_minutes_per_cycle = r["minutes basis"] or "estimated"
             n.judgment_reason_stated = {"yes": True, "no": False}.get(r["judgment reason stated"])
         ss.model = model
+        ss.map_reviewed, ss._reset_reviewed = False, True
         st.success("Model updated — see the Swimlane tab.")
         st.rerun()
 
@@ -551,6 +574,7 @@ with tab_swim:
                 if st.button("Apply changes to the model", type="primary",
                              disabled=res.changes == ["No changes found — the file matches the current model."]):
                     ss.model = res.model
+                    ss.map_reviewed, ss._reset_reviewed = False, True
                     st.success("Model updated from draw.io.")
                     st.rerun()
 
@@ -584,6 +608,7 @@ with tab_pain:
                     p.frequency = r["frequency"] or None
                     p.frequency_basis = r["basis"] or "estimated"
         ss.model = model
+        ss.map_reviewed, ss._reset_reviewed = False, True
         st.success("Saved.")
     if model.open_questions:
         st.markdown("##### Open questions for the process owner")
