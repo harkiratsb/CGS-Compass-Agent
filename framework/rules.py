@@ -1,9 +1,13 @@
 """Framework rules. Code makes every call; the AI never scores."""
 from __future__ import annotations
 
-from framework.graph import GraphFacts
-from framework.models import R_KEYS, Answer, Call, StepAssessment, TierResult
+from framework.graph import GraphFacts, graph_facts
+from framework.models import (
+    READINESS_KEYS, R_KEYS, Answer, Call, ChainStep, FollowUp, FrameworkRun, Recommendation,
+    StepAssessment, TierResult,
+)
 from framework.settings import Settings
+from ingest.merge import source_coverage
 from schema import ProcessModel
 
 
@@ -181,3 +185,198 @@ def tier_decision(step: StepAssessment, s: Settings) -> TierResult:
     if d["judgment"] >= t.human.judgment_min and d["checkability"] <= t.human.checkability_max:
         return result("Human", 4)
     return result("Mixed", 5)
+
+
+# -------------------------------------------------------- Part 4: readiness
+
+def _score(a: Answer | None) -> int | None:
+    v = a.value if a is not None else None
+    if isinstance(v, str) and v.strip().isdigit():
+        v = int(v.strip())
+    if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 5:
+        return None
+    return v
+
+
+def readiness_min(step: StepAssessment, defaults: dict[str, Answer], s: Settings) -> int:
+    """Lowest of the five tests; per-step override, else process default, else the framework default."""
+    vals = []
+    for k in READINESS_KEYS:
+        v = _score(step.readiness.get(k) or defaults.get(k))
+        vals.append(s.defaults.readiness if v is None else v)
+    return min(vals)
+
+
+# ---------------------------------------------------------- Part 5: recommend
+
+_CHANGE_CALLS = ("Remove", "Combine", "Move", "Reimagine")
+
+
+def _tier_label(t: TierResult) -> str:
+    if t.tier == "Rules" and t.human_task:
+        return "Rules + Human task"
+    if t.tier == "Agent" and t.approval:
+        return "Agent + Human approval"
+    if t.tier == "Mixed":
+        return "Mixed: split the step, or write the rule down and rescore"
+    return t.tier
+
+
+def _chain(t: TierResult) -> list[ChainStep]:
+    if t.tier == "Rules":
+        types = ["Rules"] + (["Human task"] if t.human_task else [])
+    elif t.tier == "Agent":
+        types = ["Agent"] + (["Human approval"] if t.approval else [])
+    else:  # Human, and Mixed until it is split or rescored
+        types = ["Human task"]
+    return [ChainStep(name=x, type=x) for x in types]
+
+
+def recommend(step: StepAssessment, s: Settings) -> Recommendation:
+    if step.call == "Fix the map":
+        return Recommendation(action="Ask the owner, then rescore", wave=0)
+    if step.call in _CHANGE_CALLS:
+        return Recommendation(action=step.call, wave=0)
+    t = step.tier
+    if t is None:
+        return Recommendation(action="Keep", wave=None)
+    label = _tier_label(t)
+    tier_wave = {"Rules": 2, "Agent": 3}.get(t.tier)
+    if t.standardize_first:
+        action, wave = f"Standardize first, then {label}", 1
+    else:
+        action, wave = label, tier_wave
+    ready = step.readiness_min if step.readiness_min is not None else s.defaults.readiness
+    harden = t.tier in ("Rules", "Agent") and ready < s.readiness.ready_min
+    return Recommendation(action=action, wave=wave, harden_first=harden, chain=_chain(t))
+
+
+def posture(run: FrameworkRun, facts: GraphFacts) -> list[str]:
+    if run.gate_band == "Low":
+        line = "Document first"
+    elif any(set(mc.step_ids) & facts.main_path for mc in run.map_checks):
+        line = "Fix the map"
+    elif run.redesign_potential >= 4:
+        line = "Redesign first"
+    elif run.redesign_potential == 3:
+        line = "Redesign the flagged segments, then standardize and automate the rest"
+    else:
+        line = "Incremental"
+    out = [line]
+    if any(st.tier is not None and st.tier.tier in ("Rules", "Agent")
+           and st.recommendation is not None and st.recommendation.harden_first
+           for st in run.steps.values()):
+        out.append("Harden first")
+    return out
+
+
+def waves(run: FrameworkRun) -> dict[int, list[str]]:
+    out: dict[int, list[str]] = {w: [] for w in range(4)}
+    for sid, st in run.steps.items():
+        r = st.recommendation
+        if r is not None and r.wave in out:
+            out[r.wave].append(sid)
+    return out
+
+
+_STEP_FAMILIES = ("worksheet", "r_pass1", "r_pass2", "r_move", "accountability", "combine_with",
+                  "tier1", "dials", "agent_test", "readiness")
+
+
+def _step_answers(st: StepAssessment):
+    """(path suffix, Answer) for every answer on a step, in a stable family order."""
+    for fam in _STEP_FAMILIES:
+        val = getattr(st, fam)
+        if isinstance(val, dict):
+            for k, a in val.items():
+                yield f"{fam}.{k}", a
+        elif val is not None:
+            yield fam, val
+
+
+def follow_ups(run: FrameworkRun, order: list[str] | None = None) -> list[FollowUp]:
+    """Every assumed answer: process level first, then steps in `order` (default: run order)."""
+    out: list[FollowUp] = []
+
+    def add(path: str, a: Answer):
+        if a.basis == "assumed":
+            out.append(FollowUp(path=path, question=a.question or f"Please confirm {path}",
+                                current=a.value))
+
+    for fam in ("doc_gate", "context", "readiness_defaults"):
+        for k, a in getattr(run, fam).items():
+            add(f"{fam}.{k}", a)
+    ids = [i for i in (order or []) if i in run.steps]
+    ids += [i for i in run.steps if i not in ids]
+    for sid in ids:
+        for suffix, a in _step_answers(run.steps[sid]):
+            add(f"steps.{sid}.{suffix}", a)
+    return out
+
+
+# ------------------------------------------------------------ the code pass
+
+_MEDIUM_FLAG = "doc confidence Medium"
+
+
+def _cap_m(a: Answer) -> None:
+    if a.confidence == "H":
+        a.confidence = "M"
+
+
+def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
+                names: list[str] | None = None) -> FrameworkRun:
+    """The whole code pass. Pure: works on a deep copy and returns it."""
+    run = run.model_copy(deep=True)
+    facts = graph_facts(model, run.success_end)
+    run.success_end = facts.success_end
+    ids = [sid for sid in facts.steps if sid in run.steps]
+    decision_ids = {d.id for d in model.decisions}
+
+    # Part 0: auto checks never overwrite a person's answer
+    for k, a in auto_gate_checks(model, facts, names or []).items():
+        if k not in run.doc_gate or run.doc_gate[k].basis != "answered":
+            run.doc_gate[k] = a
+    run.gate_score, run.gate_band = score_gate(run.doc_gate, s)
+
+    # Medium: keep the values, flag them and cap confidence at M (flag is re-derived each pass)
+    for st in run.steps.values():
+        for _, a in _step_answers(st):
+            if _MEDIUM_FLAG in a.flags:
+                a.flags = [f for f in a.flags if f != _MEDIUM_FLAG]
+            if run.gate_band == "Medium" and a.basis != "answered":
+                a.flags.append(_MEDIUM_FLAG)
+                _cap_m(a)
+
+    # single-source cap
+    cov = source_coverage(model)
+    for sid, st in run.steps.items():
+        if cov.get(sid, 0) < 2:
+            for _, a in _step_answers(st):
+                if a.basis == "stated" and not a.derived:
+                    _cap_m(a)
+
+    # Part 2
+    for sid in ids:
+        st = run.steps[sid]
+        st.call, st.combine_target = part2_call(st, facts, sid in decision_ids)
+    run.redesign_potential = redesign_potential([run.steps[i].call for i in ids], s)
+
+    # Parts 3-5 (Low gate stops scoring)
+    for sid in ids:
+        st = run.steps[sid]
+        if run.gate_band == "Low":
+            st.tier = st.readiness_min = st.recommendation = None
+            continue
+        st.tier = tier_decision(st, s)
+        st.readiness_min = readiness_min(st, run.readiness_defaults, s)
+        st.recommendation = recommend(st, s)
+        sop = run.doc_gate.get("8")
+        if (st.tier.tier in ("Rules", "Agent") and st.recommendation.wave != 0
+                and (sop is None or sop.value != "Y")):
+            st.recommendation.action += "; Write the SOP"
+
+    run.posture = posture(run, facts)
+    run.waves = waves(run)
+    run.follow_ups = follow_ups(run, facts.steps)
+    return run

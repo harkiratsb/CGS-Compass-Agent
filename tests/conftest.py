@@ -42,3 +42,10 @@ def demo_facts(demo_model):
     from framework.graph import graph_facts
 
     return graph_facts(demo_model)
+
+
+@pytest.fixture
+def all_assumed_run(demo_model):
+    from framework.models import blank_run
+
+    return blank_run(demo_model, "fixture")
