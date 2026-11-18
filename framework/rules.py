@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from framework.graph import GraphFacts
-from framework.models import Answer
+from framework.models import R_KEYS, Answer, Call, StepAssessment
 from framework.settings import Settings
 from schema import ProcessModel
 
@@ -76,3 +76,64 @@ def score_gate(answers: dict[str, Answer], s: Settings) -> tuple[float, str]:
     score = sum(points.get(a.value, 0.0) for a in answers.values())
     band = "High" if score >= s.gate.high else "Medium" if score >= s.gate.medium else "Low"
     return score, band
+
+
+# ------------------------------------------------- Part 2: should the step exist
+
+def yes(a: Answer | None) -> bool:
+    """True only for "Y". "Unknown", "N" and a missing answer all count as No."""
+    return a is not None and a.value == "Y"
+
+
+def part2_call(step: StepAssessment, facts: GraphFacts, is_decision: bool) -> tuple[Call, str | None]:
+    """First matching rule R1..R7 decides the call; returns (call, combine_target).
+
+    Uses r_pass2[k] when present, else r_pass1[k]. Decision and accountability
+    steps are protected: a Remove/Combine/Move becomes Keep, except when the
+    matching rule is R2 (CGS's own example removes a decision-shaped CRM check).
+
+    Side effect: sets step.protected = True whenever the step is a decision or
+    has accountability = Y (whether or not protection changed the call).
+    """
+    step.protected = is_decision or yes(step.accountability)
+
+    def hit(k: str) -> bool:
+        return yes(step.r_pass2.get(k) or step.r_pass1.get(k))
+
+    combine_with = step.combine_with.value if step.combine_with else None
+    call: Call = "Keep"
+    target: str | None = None
+    rule: str | None = None
+    for k in R_KEYS:
+        if not hit(k):
+            continue
+        if k in ("R1", "R2", "R5"):
+            call = "Remove"
+        elif k == "R3":
+            call = "Combine"
+            target = combine_with if combine_with in facts.steps else None
+        elif k == "R4":
+            call = "Move" if step.r_move is not None and step.r_move.value == "Move" else "Remove"
+        elif k == "R6":
+            if combine_with not in facts.same_actor_neighbours.get(step.step_id, set()):
+                continue
+            call, target = "Combine", combine_with
+        elif k == "R7":
+            call = "Fix the map"
+        rule = k
+        break
+
+    if step.protected and call in ("Remove", "Combine", "Move") and rule != "R2":
+        return "Keep", None
+    return call, target
+
+
+def redesign_potential(calls: list[Call], s: Settings) -> int:
+    """Score 1-5 from the percent of steps whose call is not Keep."""
+    if not calls:
+        return 1
+    pct = 100 * sum(1 for c in calls if c != "Keep") / len(calls)
+    for score, bound in enumerate(s.redesign.bands, start=1):
+        if pct < bound:
+            return score
+    return len(s.redesign.bands) + 1

@@ -35,3 +35,10 @@ def minimal_run():
         mode="fixture", map_reviewed=False, doc_gate={}, context={},
         readiness_defaults={}, steps={"A2": step},
     )
+
+
+@pytest.fixture
+def demo_facts(demo_model):
+    from framework.graph import graph_facts
+
+    return graph_facts(demo_model)
