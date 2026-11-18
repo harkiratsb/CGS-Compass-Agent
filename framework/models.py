@@ -87,6 +87,7 @@ class StepAssessment(BaseModel):
     call: Call | None = None
     combine_target: str | None = None
     protected: bool = False
+    call_rule: str | None = None          # R1..R7 that fired in part2_call; None for Keep
     tier1: dict[str, Answer] = Field(default_factory=dict)
     dials: dict[str, Answer] = Field(default_factory=dict)
     agent_test: dict[str, Answer] = Field(default_factory=dict)

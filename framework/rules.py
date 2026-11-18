@@ -100,6 +100,7 @@ def part2_call(step: StepAssessment, facts: GraphFacts, is_decision: bool) -> tu
     has accountability = Y (whether or not protection changed the call).
     """
     step.protected = is_decision or yes(step.accountability)
+    step.call_rule = None
 
     def hit(k: str) -> bool:
         return yes(step.r_pass2.get(k) or step.r_pass1.get(k))
@@ -129,6 +130,7 @@ def part2_call(step: StepAssessment, facts: GraphFacts, is_decision: bool) -> tu
 
     if step.protected and call in ("Remove", "Combine", "Move") and rule != "R2":
         return "Keep", None
+    step.call_rule = rule
     return call, target
 
 
@@ -384,7 +386,7 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
     # steps no longer on the map keep no stale results
     for sid, st in run.steps.items():
         if sid not in facts.steps:
-            st.call = st.combine_target = st.tier = st.readiness_min = st.recommendation = None
+            st.call = st.call_rule = st.combine_target = st.tier = st.readiness_min = st.recommendation = None
 
     # Part 2
     for sid in ids:

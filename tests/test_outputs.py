@@ -51,7 +51,7 @@ def test_names_removed(demo_model, acceptance_run):
     assert "Liz" not in out and "[team member]" in out
     acceptance_run.follow_ups[0].question = "Does Elizabeth approve?"
     assert "Elizabeth" not in follow_ups_markdown(acceptance_run, demo_model, names=["Elizabeth"])
-    assert "Liz" not in follow_ups_markdown(acceptance_run, demo_model, names=["Elizabeth"]) 
+    assert "Liz" not in follow_ups_markdown(acceptance_run, demo_model, names=["Elizabeth"])
 
 
 def test_follow_ups_process_first_and_deduped(demo_model, acceptance_run):
@@ -59,3 +59,27 @@ def test_follow_ups_process_first_and_deduped(demo_model, acceptance_run):
     assert md.index("## Process") < md.index("## A1")
     qs = [l for l in md.splitlines() if l.startswith("- ")]
     assert len(qs) == len(set(qs))
+
+
+def test_reason_uses_rule_that_fired_not_first_yes(demo_model, acceptance_run, settings):
+    st = acceptance_run.steps["A5"]
+    for k in ("R1", "R2", "R3", "R4", "R5"):
+        st.r_pass1[k].value = "N"
+        st.r_pass2.pop(k, None)
+    st.r_pass1["R6"].value = "Y"
+    st.r_pass1["R6"].reason = "merge reason"
+    st.r_pass1["R7"].value = "Y"
+    st.r_pass1["R7"].reason = "map reason"
+    st.combine_with = None  # R6 is skipped in part2_call
+    run = apply_rules(acceptance_run, demo_model, settings)
+    row = next(r for r in step_table(run, demo_model) if r["step_id"] == "A5")
+    assert row["call"] == "Fix the map" and row["reason"] == "R7: map reason"
+
+
+def test_removed_row_is_wave_zero_and_empty_reason_is_gap(demo_model, acceptance_run):
+    row = next(r for r in step_table(acceptance_run, demo_model) if r["step_id"] == "A3")
+    assert row["call"] == "Remove" and row["wave"] == 0
+    acceptance_run.steps["A3"].r_pass1[acceptance_run.steps["A3"].call_rule].reason = ""
+    acceptance_run.steps["A3"].r_pass2.clear()
+    row = next(r for r in step_table(acceptance_run, demo_model) if r["step_id"] == "A3")
+    assert row["reason"] == "Gap: no reason recorded"

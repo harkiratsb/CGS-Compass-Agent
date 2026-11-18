@@ -10,7 +10,7 @@ import io
 
 from framework.graph import graph_facts
 from framework.models import R_KEYS, Answer, FrameworkRun, StepAssessment
-from framework.rules import _tier_label, yes
+from framework.rules import _step_answers, _tier_label
 from handoff import _scrub, with_nicknames
 from schema import ProcessModel
 
@@ -50,22 +50,24 @@ def _lane(model: ProcessModel, facts, sid: str) -> str:
 
 def _deciding(st: StepAssessment) -> tuple[str, str]:
     """(reason, confidence) of the answer that decided the call."""
+    gap = "Gap: no reason recorded"
     if st.call and st.call != "Keep":
-        for k in R_KEYS:
-            a = st.r_pass2.get(k) or st.r_pass1.get(k)
-            if yes(a):
-                if k == "R4" and st.r_move is not None:
-                    a = st.r_move
-                return f"{k}: {a.reason}".rstrip(": "), a.confidence
-        return "", "L"
-    rule = _TIER_RULES.get(st.tier.rule_fired, f"Tier rule {st.tier.rule_fired}") if st.tier else ""
-    answers = [a for a in [*st.dials.values(), *st.tier1.values()]]
+        k = st.call_rule
+        a = st.r_pass2.get(k) or st.r_pass1.get(k) if k else None
+        if k == "R4" and st.r_move is not None:
+            a = st.r_move
+        if a is None:
+            return gap, "L"
+        return (f"{k}: {a.reason}" if a.reason else gap), a.confidence
+    if st.tier is None:
+        return gap, "L"
+    rule = _TIER_RULES.get(st.tier.rule_fired, f"Tier rule {st.tier.rule_fired}")
+    answers = [*st.dials.values(), *st.tier1.values()]
     conf = min((a.confidence for a in answers), key=_CONF_ORDER.get) if answers else "L"
     return rule, conf
 
 
 def _gaps(st: StepAssessment) -> int:
-    from framework.rules import _step_answers
     return sum(1 for _, a in _step_answers(st) if a.basis == "assumed")
 
 
@@ -105,7 +107,7 @@ def step_table_csv(rows: list[dict]) -> str:
 def _val(a: Answer | None, what: str) -> str:
     if a is None or a.value in (None, ""):
         return f"Gap: {what}"
-    return str(a.value) + ("" if a.basis != "assumed" else f" (assumed)")
+    return str(a.value) + ("" if a.basis != "assumed" else " (assumed)")
 
 
 def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None) -> str:
