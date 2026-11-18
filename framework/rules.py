@@ -337,12 +337,13 @@ def _cap_m(a: Answer, why: str) -> None:
 
 
 def _uncap(a: Answer) -> None:
-    """Restore the confidence a previous pass capped, and drop its cap flags."""
+    """Drop cap flags from a previous pass; restore the recorded confidence only if the
+    answer is still the capped one (stated, at M). A later downgrade or a person's answer wins."""
     caps = [f for f in a.flags if f.startswith(_CAP_PREFIX)]
     if not caps:
         return
     original = caps[0].rsplit("(was ", 1)[-1].rstrip(")")
-    if original in ("H", "M", "L"):
+    if a.basis == "stated" and a.confidence == "M" and original in ("H", "M", "L"):
         a.confidence = original
     a.flags = [f for f in a.flags if not f.startswith(_CAP_PREFIX)]
 

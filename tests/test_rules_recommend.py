@@ -202,3 +202,35 @@ def test_follow_ups_list_every_assumed(demo_model, all_assumed_run, settings):
     step_ids = [f.path.split(".")[1] for f in out.follow_ups if f.path.startswith("steps.")]
     order = graph_facts(demo_model).steps
     assert step_ids == sorted(step_ids, key=order.index)
+
+
+def _capped_run(demo_model, all_assumed_run, settings):
+    run = _medium_run(all_assumed_run)
+    run.steps["A2"].dials["stakes"] = _quoted()
+    out = apply_rules(run, demo_model, settings)
+    assert out.steps["A2"].dials["stakes"].confidence == "M"
+    return out
+
+
+def test_downgraded_answer_not_restored(demo_model, all_assumed_run, settings):
+    for band_value in ("N", "Y"):  # gate stays Medium, then rises to High
+        out = _capped_run(demo_model, all_assumed_run, settings)
+        a = out.steps["A2"].dials["stakes"]
+        a.basis, a.confidence = "assumed", "L"
+        a.history.append({"by": "verifier", "basis": "stated", "confidence": "M"})
+        if band_value == "Y":
+            for k in GATE_KEYS: out.doc_gate[k] = Answer(value="Y", basis="answered")
+        again = apply_rules(out, demo_model, settings)
+        a = again.steps["A2"].dials["stakes"]
+        assert again.gate_band == ("Medium" if band_value == "N" else "High")
+        assert a.confidence == "L" and not any(f.startswith("confidence capped") for f in a.flags)
+
+
+def test_answered_after_cap_not_restored(demo_model, all_assumed_run, settings):
+    out = _capped_run(demo_model, all_assumed_run, settings)
+    a = out.steps["A2"].dials["stakes"]
+    a.basis, a.value, a.confidence = "answered", 2, "H"
+    again = apply_rules(out, demo_model, settings)
+    a = again.steps["A2"].dials["stakes"]
+    assert (a.basis, a.value, a.confidence) == ("answered", 2, "H")
+    assert not any(f.startswith("confidence capped") for f in a.flags)
