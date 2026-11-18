@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import List, Tuple
 from xml.sax.saxutils import escape, quoteattr
 
-from render.swimlane import (EV_R, HEADER_W, LEFT_PAD, STICKY_EDGE, STICKY_H, STICKY_W, STICKY, TAG_H,
+from render.swimlane import (EV_R, REMOVED, HEADER_W, LEFT_PAD, STICKY_EDGE, STICKY_H, STICKY_W, STICKY, TAG_H,
                              Geometry, _tag_w, tag_rows)
 from schema import ProcessModel
 
@@ -53,26 +53,25 @@ def render_drawio(model: ProcessModel, g: Geometry, markers: dict[str, str] | No
         x, y = n.cx - n.w / 2 - lx, n.cy - n.h / 2 - ly
         nid = f"n_{n.id}"
         label = escape(n.label)
+        m = markers.get(n.id)
         if n.kind == "decision":
             style = "rhombus;whiteSpace=wrap;html=1;fontSize=10;strokeWidth=1.5;"
         elif n.kind in ("start", "end"):
             style = ("ellipse;html=1;whiteSpace=wrap;verticalLabelPosition=bottom;verticalAlign=top;fontSize=9;fontColor=#6B7280;"
                      f"strokeWidth={'1.5' if n.kind == 'start' else '3.5'};aspect=fixed;")
             label = escape(n.label.replace("End: ", "")) if n.kind == "end" else label
-        elif n.kind == "subprocess":
-            style = "rounded=1;arcSize=12;whiteSpace=wrap;html=1;fontSize=11;strokeWidth=1.5;"
-            label += "<br>⊞"
         else:
             style = "rounded=1;arcSize=12;whiteSpace=wrap;html=1;fontSize=11;strokeWidth=1.5;"
-            m = markers.get(n.id)
+            if n.kind == "subprocess":
+                label += "<br>⊞"
             if m == "agent":
-                style = "shape=doubleRect;rounded=1;arcSize=12;whiteSpace=wrap;html=1;fontSize=11;strokeWidth=1.5;"
+                style = "shape=doubleRect;" + style
             elif m == "rules":
                 label = "⚙ " + label
             elif m == "approval":
                 label = "✓ " + label
-            elif m == "removed":
-                style += "dashed=1;strokeColor=#9CA3AF;fontColor=#9CA3AF;"
+        if m == "removed":
+            style += f"dashed=1;strokeColor={REMOVED};fontColor={REMOVED};"
         vertex(nid, label, style, x, y, n.w, n.h, parent=f"lane_{n.role_id}")
 
         # tool tags and text callout as children of the step (relative to it), so they move with it

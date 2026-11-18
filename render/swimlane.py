@@ -34,6 +34,7 @@ ORANGE = "#FF6428"
 INK = "#1F2328"
 GREY = "#6B7280"
 LANE_LINE = "#9CA3AF"
+REMOVED = "#9CA3AF"          # grey for steps marked removed in the future state
 STICKY = "#FFF3A3"
 STICKY_EDGE = "#E3C94C"
 TAG_EDGE = "#6B7280"
@@ -524,23 +525,25 @@ def _route_all(model, nodes: Dict[str, NodeGeo], stickies: List[StickyGeo], lane
 
 
 # ================================================================== SVG
-REMOVED = "#9CA3AF"
 def _node_svg(n: NodeGeo, overlay, pain_nodes, coverage, marker: str | None = None) -> str:
     cx, cy = n.cx, n.cy
     out = []
+    gone = marker == "removed"
+    ink = REMOVED if gone else INK
+    dash_attr = ' stroke-dasharray="5,3"' if gone else ""
     if n.kind == "decision":
         w, h = n.w, n.h
         out.append(f'<polygon points="{cx},{cy-h/2} {cx+w/2},{cy} {cx},{cy+h/2} {cx-w/2},{cy}" '
-                   f'fill="#FFFFFF" stroke="{INK}" stroke-width="1.5"/>')
+                   f'fill="#FFFFFF" stroke="{ink}" stroke-width="1.5"{dash_attr}/>')
         lines = _wrap(n.label, 17, 3)
         y0 = cy - (len(lines) - 1) * 6.5 + 4
         for i, line in enumerate(lines):
-            out.append(_text(cx, y0 + i * 13, line, 10.5))
+            out.append(_text(cx, y0 + i * 13, line, 10.5, fill=ink))
         return "".join(out)
 
     if n.kind in ("start", "end"):
         sw = 1.5 if n.kind == "start" else 3.5
-        out.append(f'<circle cx="{cx}" cy="{cy}" r="{EV_R}" fill="#FFFFFF" stroke="{INK}" stroke-width="{sw}"/>')
+        out.append(f'<circle cx="{cx}" cy="{cy}" r="{EV_R}" fill="#FFFFFF" stroke="{ink}" stroke-width="{sw}"{dash_attr}/>')
         label = n.label if n.kind == "start" else n.label.replace("End: ", "")
         for i, line in enumerate(_wrap(label, 22, 2)):
             out.append(_text(cx, cy + EV_R + 13 + i * 12, line, 9.5, fill=GREY))
@@ -548,10 +551,8 @@ def _node_svg(n: NodeGeo, overlay, pain_nodes, coverage, marker: str | None = No
 
     fill = FILL[n.step_type] if overlay else "#FFFFFF"
     stroke = STROKE[n.step_type] if overlay else INK
-    if marker == "removed":
-        stroke, dash_attr = REMOVED, ' stroke-dasharray="5,3"'
-    else:
-        dash_attr = ""
+    if gone:
+        stroke = REMOVED
     out.append(f'<rect x="{cx-n.w/2}" y="{cy-n.h/2}" width="{n.w}" height="{n.h}" rx="7" '
                f'fill="{fill}" stroke="{stroke}" stroke-width="1.5"{dash_attr}/>')
     if marker == "agent":                                  # double border: a second outline just inside the first
@@ -567,7 +568,7 @@ def _node_svg(n: NodeGeo, overlay, pain_nodes, coverage, marker: str | None = No
     lines = _wrap(n.label, 20, 2)
     y0 = cy - (len(lines) - 1) * 6.5 + 4 - (5 if n.kind == "subprocess" else 0)
     for i, line in enumerate(lines):
-        out.append(_text(cx, y0 + i * 13, line, 11, fill=REMOVED if marker == "removed" else INK))
+        out.append(_text(cx, y0 + i * 13, line, 11, fill=ink))
     if n.notes:
         out.append(_text(cx, cy + n.h / 2 + 12, _wrap(n.notes, 32, 1)[0], 8.5, fill=GREY, italic=True))
 
@@ -667,7 +668,7 @@ def render_svg(model: ProcessModel, coverage: Dict[str, int] | None = None, titl
         if any(not t.on_list for n in g.nodes.values() for t in n.tags):
             items += [("not on CGS tool list", "tag_off")]
     if markers:
-        items += [("Rules step", "m_rules"), ("Agent step", "m_agent"), ("Approval step", "m_approval"), ("Task step", "rect")]
+        items += [("Rules step", "m_rules"), ("Agent step", "m_agent"), ("Approval step", "m_approval")]
         if "removed" in markers.values():
             items += [("Removed", "m_removed")]
     if overlay:
