@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from framework.graph import GraphFacts
-from framework.models import R_KEYS, Answer, Call, StepAssessment
+from framework.models import R_KEYS, Answer, Call, StepAssessment, TierResult
 from framework.settings import Settings
 from schema import ProcessModel
 
@@ -137,3 +137,47 @@ def redesign_potential(calls: list[Call], s: Settings) -> int:
         if pct < bound:
             return score
     return len(s.redesign.bands) + 1
+
+
+# ------------------------------------------------------------ Part 3: the tiers
+
+def dial(step: StepAssessment, key: str, s: Settings) -> int:
+    """The dial value if it is an int 1-5 (or a numeric string), else the framework default."""
+    default = s.defaults.rule_clarity if key == "rule_clarity" else s.defaults.dial
+    a = step.dials.get(key)
+    v = a.value if a is not None else None
+    if isinstance(v, str) and v.strip().isdigit():
+        v = int(v.strip())
+    if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 5:
+        return default
+    return v
+
+
+def agent_test_pass(at: dict[str, Answer]) -> bool:
+    return (yes(at.get("A1")) or yes(at.get("A2"))) and not yes(at.get("A3")) and yes(at.get("A4"))
+
+
+def tier_decision(step: StepAssessment, s: Settings) -> TierResult:
+    """First matching rule 1-5 picks the tier. Thresholds come from settings."""
+    standardize_first = not all(yes(step.tier1.get(k)) for k in ("D1", "D2", "D3"))
+    d = {k: dial(step, k, s) for k in ("rule_clarity", "input_structure", "variation",
+                                       "judgment", "checkability", "stakes")}
+    t = s.tier
+
+    def result(tier, rule, **kw):
+        return TierResult(standardize_first=standardize_first, tier=tier, rule_fired=rule, **kw)
+
+    if d["stakes"] >= t.human.stakes:
+        return result("Human", 1)
+    if (d["rule_clarity"] >= t.rules.clarity_min and d["input_structure"] >= t.rules.input_min
+            and d["variation"] <= t.rules.variation_max and d["judgment"] <= t.rules.judgment_max):
+        return result("Rules", 2)
+    if d["checkability"] >= t.agent.checkability_min and (
+            d["judgment"] >= t.agent.judgment_min or d["input_structure"] <= t.agent.input_max
+            or d["variation"] >= t.agent.variation_min):
+        if agent_test_pass(step.agent_test):
+            return result("Agent", 3, approval=d["stakes"] >= t.agent.approval_stakes_min, error_budget=True)
+        return result("Rules", 3, human_task=True)
+    if d["judgment"] >= t.human.judgment_min and d["checkability"] <= t.human.checkability_max:
+        return result("Human", 4)
+    return result("Mixed", 5)
