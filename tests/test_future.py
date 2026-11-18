@@ -73,3 +73,39 @@ def test_load_answers_sets_values_and_leaves_input(demo_model, tmp_path):
     run = load_answers(base, p)
     assert run.steps["A11"].accountability.value == "Y" and run.steps["A2"].dials["stakes"].value == 2
     assert base.steps["A11"].accountability is None
+
+
+def test_made_unnecessary_by_is_removed(demo_model, all_assumed_run, settings):
+    run = apply_rules(all_assumed_run, demo_model, settings)
+    run.steps["A5"].call, run.steps["A5"].made_unnecessary_by = "Keep", "A4"
+    fut, _ = build_future_model(demo_model, run)
+    assert "A5" not in fut.node_ids() and not any(i.startswith("A5.") for i in fut.node_ids())
+    assert fut.validate_graph() == []
+
+
+def test_combine_with_unknown_target_is_treated_as_remove(demo_model, all_assumed_run, settings):
+    run = apply_rules(all_assumed_run, demo_model, settings)
+    run.steps["A5"].call, run.steps["A5"].combine_target = "Combine", "NOPE"
+    fut, _ = build_future_model(demo_model, run)
+    assert "A5" not in fut.node_ids() and fut.validate_graph() == []
+
+
+def test_chain_is_linked_in_order(demo_model, acceptance_run):
+    fut, _ = build_future_model(demo_model, acceptance_run)
+    pairs = {(e.from_id, e.to_id) for e in fut.edges}
+    assert ("A6.1", "A6.2") in pairs
+    assert any(t == "A6.1" for _, t in pairs) and not any(f == "A6" or t == "A6" for f, t in pairs)
+    original_out = {e.to_id for e in demo_model.edges if e.from_id == "A6"}
+    assert original_out and any(f == "A6.2" for f, _ in pairs)
+    assert not any(f == "A6.1" and t != "A6.2" for f, t in pairs)
+
+
+def test_handoffs_and_pain_points_follow_dropped_and_chained_nodes(demo_model, acceptance_run):
+    fut, _ = build_future_model(demo_model, acceptance_run)
+    ids = fut.node_ids()
+    assert all(h.at_node_id in ids for h in fut.handoffs)
+    assert all(p.node_id in ids for p in fut.pain_points if p.node_id)
+    pains = {p.id: p.node_id for p in fut.pain_points}
+    assert "P1" not in pains          # D1 was removed
+    assert pains["P2"] == "A6.1"      # A6 became a chain
+    assert any(h.at_node_id == "A6.1" for h in fut.handoffs)

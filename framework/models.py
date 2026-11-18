@@ -1,6 +1,8 @@
 """Framework data models: every framework input is an Answer; code does the scoring."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -300,9 +302,6 @@ def load_answers(run: FrameworkRun, path) -> FrameworkRun:
     Dict families get the key created or replaced; r_move / accountability /
     combine_with are set. Unknown step or family raises KeyError.
     """
-    import json
-    from pathlib import Path
-
     run = run.model_copy(deep=True)
     for apath, raw in json.loads(Path(path).read_text()).items():
         answer = Answer.model_validate(raw)
