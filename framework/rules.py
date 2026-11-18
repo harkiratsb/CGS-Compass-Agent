@@ -150,8 +150,15 @@ def dial(step: StepAssessment, key: str, s: Settings) -> int:
     default = s.defaults.rule_clarity if key == "rule_clarity" else s.defaults.dial
     a = step.dials.get(key)
     v = a.value if a is not None else None
-    if isinstance(v, str) and v.strip().isdigit():
-        v = int(v.strip())
+    if isinstance(v, str):
+        try:
+            v = float(v.strip())
+        except ValueError:
+            return default
+    if isinstance(v, float):
+        if not v.is_integer():
+            return default
+        v = int(v)
     if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 5:
         return default
     return v

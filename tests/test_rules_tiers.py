@@ -60,8 +60,31 @@ def test_dial_defaults(settings):
     assert dial(st, "variation", settings) == 3
 
 
-@pytest.mark.parametrize("raw,expected", [("4", 4), (" 2 ", 2), (True, 3), (0, 3), ("x", 3), (4.0, 3), (None, 3), ("6", 3)])
+@pytest.mark.parametrize("raw,expected", [("4", 4), (" 2 ", 2), (True, 3), (0, 3), ("x", 3), (4.0, 4), ("4.0", 4), (3.5, 3), ("3.5", 3), ("²", 3), ("nan", 3), ("inf", 3), (float("nan"), 3), (None, 3), ("6", 3)])
 def test_dial_coercion(raw, expected, settings):
     st = _t()
     st.dials["variation"] = Answer(value=raw)
     assert dial(st, "variation", settings) == expected
+
+
+def _r(**kw):
+    base = dict(stakes=2, rule_clarity=4, input_structure=4, variation=2, judgment=2, checkability=5)
+    base.update(kw)
+    return base
+
+
+@pytest.mark.parametrize("dials,expected", [
+    (_r(rule_clarity=3), ("Mixed", 5)),   # clarity just below the Rules minimum
+    (_r(rule_clarity=4), ("Rules", 2)),
+    (_r(stakes=4), ("Rules", 2)),         # stakes just below Human
+    (_r(stakes=5), ("Human", 1)),
+    # rule 3 OR: only input_structure <= 2 fires
+    (dict(stakes=2, rule_clarity=2, input_structure=2, variation=2, judgment=2, checkability=3), ("Agent", 3)),
+    # rule 3 OR: only variation >= 3 fires
+    (dict(stakes=2, rule_clarity=2, input_structure=3, variation=3, judgment=2, checkability=3), ("Agent", 3)),
+    # none of the OR terms: falls through
+    (dict(stakes=2, rule_clarity=2, input_structure=3, variation=2, judgment=2, checkability=3), ("Mixed", 5)),
+])
+def test_boundaries(dials, expected, settings):
+    r = tier_decision(_t(**dials), settings)
+    assert (r.tier, r.rule_fired) == expected
