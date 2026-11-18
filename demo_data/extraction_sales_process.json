@@ -1,0 +1,1837 @@
+{
+  "process": {
+    "name": "CGS Lead & Opportunity Management (Sales Process)",
+    "owner": "Director of Operations",
+    "scope": "From a team member identifying a lead through to alignment on a discussion document and hand-off into the SOW / proposal process. Proposal drafting, negotiation and effort modelling are a separate documented process.",
+    "summary": "Any CGS team member can identify a lead, which is recorded in Insightly (directly or via an admin). A lead owner runs iterative outreach using sales plays; a response leads to a prepared, transcribed meeting. If an opportunity exists, the lead is converted in Insightly, an opportunity lead is chosen, a team assembled and a discussion document prepared, reviewed where required, and discussed with the prospect. Alignment hands off to proposal development; non-alignment either revises the document or closes the opportunity back to a contact."
+  },
+  "roles": [
+    {
+      "id": "R1",
+      "name": "Lead Identifier (any team member)",
+      "description": "Any CGS team member who spots a lead from events, news, mergers, tool adoption or visioning work.",
+      "is_external": false
+    },
+    {
+      "id": "R2",
+      "name": "Director of Operations",
+      "description": "Confirms lead reassignment; holds an Insightly seat and enters or converts records for team members without access (a delegate may cover).",
+      "is_external": false
+    },
+    {
+      "id": "R3",
+      "name": "Lead Owner",
+      "description": "Team member accountable for outreach, meeting scheduling, preparation and the first meeting with the lead.",
+      "is_external": false
+    },
+    {
+      "id": "R4",
+      "name": "Opportunity Lead",
+      "description": "Accountable for the opportunity after conversion; assembles the exploration team, prepares and presents the discussion document.",
+      "is_external": false
+    },
+    {
+      "id": "R5",
+      "name": "Supporting Team Members",
+      "description": "Provide inputs and existing materials for meeting preparation; may join the opportunity exploration team.",
+      "is_external": false
+    },
+    {
+      "id": "R6",
+      "name": "Reviewer (Service Line Lead / Leadership)",
+      "description": "Second pair of eyes on prepared materials and discussion documents, especially where price is referenced.",
+      "is_external": false
+    },
+    {
+      "id": "R7",
+      "name": "Lead / Prospective Client",
+      "description": "The external party being pursued.",
+      "is_external": true
+    }
+  ],
+  "activities": [
+    {
+      "id": "S0",
+      "name": "Start",
+      "role_id": "R1",
+      "kind": "start",
+      "order": 0,
+      "description": "",
+      "notes": "",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": []
+    },
+    {
+      "id": "A1",
+      "name": "Identify lead",
+      "role_id": "R1",
+      "kind": "activity",
+      "order": 1,
+      "description": "Team member becomes aware of a company or person CGS could help (news, merger, new tool, visioning work, a conversation).",
+      "notes": "",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:18:00",
+          "quote": "The member is identifying a lead... it could be anybody"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:00:59",
+          "quote": "A lead identifier could generally be just about anybody within the CGS team"
+        }
+      ],
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        20
+      ],
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A2",
+      "name": "Add lead to Insightly",
+      "role_id": "R1",
+      "kind": "activity",
+      "order": 3,
+      "description": "Enter the lead's contact information; if the company does not exist in Insightly, create the company record first so the record is as complete as possible.",
+      "notes": "Ensure the company record exists; keep the record complete",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [
+        "Insightly is the system of record for leads, contacts and opportunities"
+      ],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:20:42",
+          "quote": "adding lead to insightly also includes ensuring company has added"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:01:42",
+          "quote": "input that lead's contact information into insightly"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        15
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A3",
+      "name": "Request lead entry",
+      "role_id": "R1",
+      "kind": "activity",
+      "order": 3,
+      "description": "Team member without an Insightly seat asks the Director of Operations or a delegate to enter the lead.",
+      "notes": "Ask an Insightly seat holder to add the lead",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:19:31",
+          "quote": "they should request that... assist in putting the lead into insightly"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:02:57",
+          "quote": "ask for assistance to add the lead's contact information"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": [
+        2,
+        10
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A4",
+      "name": "Add lead to Insightly",
+      "role_id": "R2",
+      "kind": "activity",
+      "order": 4,
+      "description": "",
+      "notes": "",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:02:57",
+          "quote": "director of operations or [delegate] who is occasionally a delegate for inputting information"
+        },
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:19:31",
+          "quote": "assist in putting the lead into insightly"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        15
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A5",
+      "name": "Confirm lead assignment",
+      "role_id": "R2",
+      "kind": "activity",
+      "order": 6,
+      "description": "When the identifier should not do the outreach themselves, propose another owner and have it confirmed (Director of Operations / ELT) rather than every assignment going to the ELT.",
+      "notes": "Identifier proposes an owner; Director of Operations confirms",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:20:42",
+          "quote": "I want to assign it to [team member] because I shouldn't be the one to reach out"
+        },
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:23:09",
+          "quote": "it shouldn't necessarily be an executive leadership team decision"
+        },
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:23:09",
+          "quote": "I'm gonna change that swim [lane]... you help with this"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        30
+      ],
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A6",
+      "name": "Contact lead",
+      "role_id": "R3",
+      "kind": "activity",
+      "order": 7,
+      "description": "Reach out with a reason to connect, selecting an existing sales play / service-line introduction that fits the lead's situation. BCC the Insightly email address so the communication is stored on the record.",
+      "notes": "Use a sales play; BCC Insightly email on every outreach",
+      "tools": [
+        "Insightly",
+        "Gmail"
+      ],
+      "assumptions": [
+        "Sales plays exist for the main service lines",
+        "Every outreach email is BCC'd to Insightly"
+      ],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:24:22",
+          "quote": "goes to the sales play. Yes."
+        },
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:26:46",
+          "quote": "BCC the email address always... to ensure all communication"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:02:57",
+          "quote": "make some sort of connection between the services that CGS provides"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 20,
+      "human_minutes_range": [
+        10,
+        30
+      ],
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A7",
+      "name": "Repeat outreach",
+      "role_id": "R3",
+      "kind": "activity",
+      "order": 9,
+      "description": "Repeat outreach until the lead responds or a decision is made to stop.",
+      "notes": "",
+      "tools": [
+        "Gmail",
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:25:38",
+          "quote": "we'll continue the iterative outreach and circle back through"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:04:19",
+          "quote": "You contact that lead again and then we reach back to the decision point"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 30,
+      "human_minutes_range": [
+        10,
+        60
+      ],
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A8",
+      "name": "Transition lead to contact",
+      "role_id": "R3",
+      "kind": "activity",
+      "order": 9,
+      "description": "Cease active outreach when new information shows outreach is not valuable, or after repeated non-response; convert the lead to a contact, which still receives white papers / campaigns.",
+      "notes": "New info shows poor fit, or repeated non-response",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:26:46",
+          "quote": "go back into insightly and make it a contact instead of a lead"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:04:48",
+          "quote": "they become a contact in insightly and that ends the process"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:04:19",
+          "quote": "new information comes to light... continued outreach is not necessarily valuable"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": [
+        2,
+        10
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "E1",
+      "name": "Lead becomes contact",
+      "role_id": "R3",
+      "kind": "end",
+      "order": 10,
+      "description": "",
+      "notes": "",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": []
+    },
+    {
+      "id": "A9",
+      "name": "Schedule lead meeting",
+      "role_id": "R3",
+      "kind": "activity",
+      "order": 10,
+      "description": "",
+      "notes": "",
+      "tools": [
+        "Calendar"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:34:45",
+          "quote": "schedule meeting with lead"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:04:48",
+          "quote": "you're going to schedule a meeting to get more information"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        20
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A10",
+      "name": "Prepare for lead meeting",
+      "role_id": "R3",
+      "kind": "subprocess",
+      "order": 11,
+      "description": "Determine who from CGS should attend; contact team members to identify existing materials; optionally hold a prep meeting to gather inputs; prepare materials; have them reviewed by a second person (four eyes).",
+      "notes": "Attendees, existing materials, optional prep meeting, four-eyes review",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:34:45",
+          "quote": "a step that I think we often miss is really prepping for said meeting"
+        },
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:37:08",
+          "quote": "prep meeting is necessary... prepare the materials and like eyes from someone else"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 60,
+      "human_minutes_range": [
+        30,
+        120
+      ],
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A11",
+      "name": "Conduct lead meeting",
+      "role_id": "R3",
+      "kind": "activity",
+      "order": 12,
+      "description": "",
+      "notes": "Transcribe or take notes",
+      "tools": [
+        "Gemini (notes)"
+      ],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:38:34",
+          "quote": "conduct meeting and take notes or have Gemini take notes"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:05:35",
+          "quote": "within that meeting you transcribe if possible"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C2",
+      "human_minutes_per_cycle": 45,
+      "human_minutes_range": [
+        30,
+        60
+      ],
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "stated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A12",
+      "name": "Convert lead to opportunity",
+      "role_id": "R3",
+      "kind": "activity",
+      "order": 15,
+      "description": "",
+      "notes": "",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:41:47",
+          "quote": "convert lead to opportunity in insightly"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:07:19",
+          "quote": "converting that lead to an opportunity officially in insightly"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": null,
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A13",
+      "name": "Request lead conversion",
+      "role_id": "R3",
+      "kind": "activity",
+      "order": 15,
+      "description": "",
+      "notes": "",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:41:47",
+          "quote": "they'll have to request it... request assistance. Convert the lead"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:07:19",
+          "quote": "we request assistance in converting that lead to an opportunity"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": null,
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A14",
+      "name": "Convert lead to opportunity",
+      "role_id": "R2",
+      "kind": "activity",
+      "order": 16,
+      "description": "",
+      "notes": "",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:07:19",
+          "quote": "someone else has converted that lead for us"
+        },
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:41:47",
+          "quote": "request assistance. Convert the lead"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": null,
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A15",
+      "name": "Determine opportunity lead",
+      "role_id": "R3",
+      "kind": "subprocess",
+      "order": 17,
+      "description": "Conversation with a broader group to decide who owns the opportunity (may be the lead owner or a subject-matter / service-line lead). Lead owner retains ownership until a successor is confirmed.",
+      "notes": "Lead owner retains ownership until successor confirmed",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:44:58",
+          "quote": "determine an opportunity lead... until they determine who it is, they still own it"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:08:08",
+          "quote": "determining who is the opportunity lead"
+        }
+      ],
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 30,
+      "human_minutes_range": [
+        15,
+        60
+      ],
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A16",
+      "name": "Assemble exploration team",
+      "role_id": "R4",
+      "kind": "activity",
+      "order": 18,
+      "description": "",
+      "notes": "",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:47:48",
+          "quote": "assemble the opportunity exploration team"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:08:46",
+          "quote": "that person can then assemble a team that would be working on that opportunity"
+        }
+      ],
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 20,
+      "human_minutes_range": [
+        10,
+        30
+      ],
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A17",
+      "name": "Prepare discussion document",
+      "role_id": "R4",
+      "kind": "activity",
+      "order": 19,
+      "description": "Document the proposed engagement style and value so CGS and the prospect can confirm they are discussing the right kind of work.",
+      "notes": "",
+      "tools": [
+        "Google Docs"
+      ],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:40:04",
+          "quote": "Prepare discussion document"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:08:46",
+          "quote": "prepare a discussion document that is going to be brought to the table"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 180,
+      "human_minutes_range": [
+        120,
+        480
+      ],
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A18",
+      "name": "Review discussion document",
+      "role_id": "R6",
+      "kind": "activity",
+      "order": 21,
+      "description": "Leadership / service-line lead review, especially where the document references price. Iterates until approved.",
+      "notes": "Required where price is referenced; four eyes",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:47:48",
+          "quote": "reviews required for... documents that reference price especially"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:09:42",
+          "quote": "if review is required then that goes through a review process"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 30,
+      "human_minutes_range": [
+        15,
+        60
+      ],
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A19",
+      "name": "Schedule opportunity meeting",
+      "role_id": "R4",
+      "kind": "activity",
+      "order": 22,
+      "description": "Best practice: book this immediately after the first meeting confirms an opportunity, not after the document is ready.",
+      "notes": "Best practice: book immediately after lead meeting",
+      "tools": [
+        "Calendar"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:50:29",
+          "quote": "right then and there, you schedule it"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        20
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A20",
+      "name": "Conduct opportunity meeting",
+      "role_id": "R4",
+      "kind": "activity",
+      "order": 23,
+      "description": "",
+      "notes": "",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:51:31",
+          "quote": "We meet with our lead to discuss the opportunity"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:09:42",
+          "quote": "have another meeting with your lead to discuss the opportunity"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 60,
+      "human_minutes_range": [
+        45,
+        90
+      ],
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A21",
+      "name": "Close opportunity",
+      "role_id": "R4",
+      "kind": "activity",
+      "order": 26,
+      "description": "Add overview/reasoning to Insightly, mark opportunity closed, revert to contact (via admin if no access).",
+      "notes": "Record reasoning; revert to contact",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:52:46",
+          "quote": "add reasoning into insightly, close opportunity"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:11:00",
+          "quote": "marked as closed and reverted to a contact in insightly"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        15
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "E2",
+      "name": "Opportunity closed",
+      "role_id": "R4",
+      "kind": "end",
+      "order": 28,
+      "description": "",
+      "notes": "",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": []
+    },
+    {
+      "id": "A22",
+      "name": "Develop proposal",
+      "role_id": "R4",
+      "kind": "subprocess",
+      "order": 25,
+      "description": "Hand-off to the separately documented SOW / proposal process: draft with the proposal agent, team review, ELT approval, negotiation, effort model. Update Insightly.",
+      "notes": "Separate SOW process; update Insightly with outcome",
+      "tools": [
+        "Insightly",
+        "Proposal agent"
+      ],
+      "assumptions": [],
+      "step_type": "judgment",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:54:46",
+          "quote": "create proposal and continue with... its own process that we have documented"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:11:38",
+          "quote": "we move into the SOW development process or the proposal process"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:11:38",
+          "quote": "everything should be updated appropriately within Insightly"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C2",
+      "human_minutes_per_cycle": null,
+      "human_minutes_range": null,
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "E3",
+      "name": "Proceed to proposal",
+      "role_id": "R4",
+      "kind": "end",
+      "order": 26,
+      "description": "",
+      "notes": "",
+      "tools": [],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": []
+    },
+    {
+      "id": "A23",
+      "name": "Request opportunity closure",
+      "role_id": "R4",
+      "kind": "activity",
+      "order": 26,
+      "description": "Ask an Insightly seat holder to record the reasoning and close the opportunity.",
+      "notes": "",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:53:53",
+          "quote": "insightly access circle... add the reasoning, close the opportunity"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": null,
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "A24",
+      "name": "Close opportunity",
+      "role_id": "R2",
+      "kind": "activity",
+      "order": 27,
+      "description": "",
+      "notes": "Record reasoning; revert to contact",
+      "tools": [
+        "Insightly"
+      ],
+      "assumptions": [],
+      "step_type": "deterministic",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:53:53",
+          "quote": "insightly access circle"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:11:00",
+          "quote": "marked as closed and reverted to a contact in insightly"
+        }
+      ],
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10,
+      "human_minutes_range": [
+        5,
+        15
+      ],
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "question": "Has Insightly access?",
+      "role_id": "R1",
+      "order": 2,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "A2"
+        },
+        {
+          "label": "No",
+          "next_id": "A3"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:18:00",
+          "quote": "add a decision here: insightly access"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:02:18",
+          "quote": "if you don't have a seat in insightly, you're going to reach out to someone who does"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 0,
+      "human_minutes_range": null,
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "D2",
+      "question": "Direct outreach by identifier?",
+      "role_id": "R1",
+      "order": 5,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "A6"
+        },
+        {
+          "label": "No",
+          "next_id": "A5"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:20:42",
+          "quote": "if direct outreach is yes, they remain the lead owner. If no, confirm the assignment"
+        }
+      ],
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": [
+        2,
+        15
+      ],
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "D3",
+      "question": "Lead responds?",
+      "role_id": "R3",
+      "order": 8,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "A9"
+        },
+        {
+          "label": "No – keep trying",
+          "next_id": "A7"
+        },
+        {
+          "label": "No – cease outreach",
+          "next_id": "A8"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:25:38",
+          "quote": "the lead responds. We have three options"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:03:53",
+          "quote": "decision point on whether or not the lead responds"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 2,
+      "human_minutes_range": null,
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "D4",
+      "question": "Opportunity with this lead?",
+      "role_id": "R3",
+      "order": 13,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "D5"
+        },
+        {
+          "label": "Adjust focus",
+          "next_id": "A9"
+        },
+        {
+          "label": "No",
+          "next_id": "A8"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:38:34",
+          "quote": "decision: follow-up or opportunity or no opportunity"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:06:20",
+          "quote": "is there an opportunity with that lead following that meeting"
+        }
+      ],
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 15,
+      "human_minutes_range": [
+        5,
+        30
+      ],
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "D5",
+      "question": "Has Insightly access?",
+      "role_id": "R3",
+      "order": 14,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "A12"
+        },
+        {
+          "label": "No",
+          "next_id": "A13"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:41:47",
+          "quote": "Have insightly access. Yes: convert lead to opportunity"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:07:19",
+          "quote": "we circle back to whether or not we have insightly access"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 0,
+      "human_minutes_range": null,
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "D6",
+      "question": "Review required?",
+      "role_id": "R4",
+      "order": 20,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "A18"
+        },
+        {
+          "label": "No",
+          "next_id": "A19"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:47:48",
+          "quote": "is a review necessary"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:09:42",
+          "quote": "decide whether or not a review is required from leadership"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 2,
+      "human_minutes_range": null,
+      "judgment_reason_stated": false,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "D7",
+      "question": "Aligned on the offering?",
+      "role_id": "R4",
+      "order": 24,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "A22"
+        },
+        {
+          "label": "No – revise",
+          "next_id": "A17"
+        },
+        {
+          "label": "No – end",
+          "next_id": "D8"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:51:31",
+          "quote": "Are we aligned with what we're offering? If yes, it goes into proposal"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:10:24",
+          "quote": "whether or not CGS and the potential client are aligned"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5,
+      "human_minutes_range": [
+        2,
+        10
+      ],
+      "judgment_reason_stated": true,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "id": "D8",
+      "question": "Has Insightly access?",
+      "role_id": "R4",
+      "order": 25,
+      "branches": [
+        {
+          "label": "Yes",
+          "next_id": "A21"
+        },
+        {
+          "label": "No",
+          "next_id": "A23"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:53:53",
+          "quote": "do we also have to do the whole do you have insightly access? Yes, we do"
+        }
+      ],
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 0,
+      "human_minutes_range": null,
+      "judgment_reason_stated": null,
+      "sizing_basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from_id": "S0",
+      "to_id": "A1",
+      "label": ""
+    },
+    {
+      "from_id": "A1",
+      "to_id": "D1",
+      "label": ""
+    },
+    {
+      "from_id": "D1",
+      "to_id": "A2",
+      "label": "Yes"
+    },
+    {
+      "from_id": "D1",
+      "to_id": "A3",
+      "label": "No"
+    },
+    {
+      "from_id": "A3",
+      "to_id": "A4",
+      "label": ""
+    },
+    {
+      "from_id": "A2",
+      "to_id": "D2",
+      "label": ""
+    },
+    {
+      "from_id": "A4",
+      "to_id": "D2",
+      "label": ""
+    },
+    {
+      "from_id": "D2",
+      "to_id": "A6",
+      "label": "Yes"
+    },
+    {
+      "from_id": "D2",
+      "to_id": "A5",
+      "label": "No"
+    },
+    {
+      "from_id": "A5",
+      "to_id": "A6",
+      "label": ""
+    },
+    {
+      "from_id": "A6",
+      "to_id": "D3",
+      "label": ""
+    },
+    {
+      "from_id": "D3",
+      "to_id": "A7",
+      "label": "No – keep trying"
+    },
+    {
+      "from_id": "A7",
+      "to_id": "D3",
+      "label": ""
+    },
+    {
+      "from_id": "D3",
+      "to_id": "A8",
+      "label": "No – cease"
+    },
+    {
+      "from_id": "A8",
+      "to_id": "E1",
+      "label": ""
+    },
+    {
+      "from_id": "D3",
+      "to_id": "A9",
+      "label": "Yes"
+    },
+    {
+      "from_id": "A9",
+      "to_id": "A10",
+      "label": ""
+    },
+    {
+      "from_id": "A10",
+      "to_id": "A11",
+      "label": ""
+    },
+    {
+      "from_id": "A11",
+      "to_id": "D4",
+      "label": ""
+    },
+    {
+      "from_id": "D4",
+      "to_id": "A9",
+      "label": "Adjust focus"
+    },
+    {
+      "from_id": "D4",
+      "to_id": "A8",
+      "label": "No"
+    },
+    {
+      "from_id": "D4",
+      "to_id": "D5",
+      "label": "Yes"
+    },
+    {
+      "from_id": "D5",
+      "to_id": "A12",
+      "label": "Yes"
+    },
+    {
+      "from_id": "D5",
+      "to_id": "A13",
+      "label": "No"
+    },
+    {
+      "from_id": "A13",
+      "to_id": "A14",
+      "label": ""
+    },
+    {
+      "from_id": "A12",
+      "to_id": "A15",
+      "label": ""
+    },
+    {
+      "from_id": "A14",
+      "to_id": "A15",
+      "label": ""
+    },
+    {
+      "from_id": "A15",
+      "to_id": "A16",
+      "label": ""
+    },
+    {
+      "from_id": "A16",
+      "to_id": "A17",
+      "label": ""
+    },
+    {
+      "from_id": "A17",
+      "to_id": "D6",
+      "label": ""
+    },
+    {
+      "from_id": "D6",
+      "to_id": "A18",
+      "label": "Yes"
+    },
+    {
+      "from_id": "A18",
+      "to_id": "A19",
+      "label": ""
+    },
+    {
+      "from_id": "D6",
+      "to_id": "A19",
+      "label": "No"
+    },
+    {
+      "from_id": "A19",
+      "to_id": "A20",
+      "label": ""
+    },
+    {
+      "from_id": "A20",
+      "to_id": "D7",
+      "label": ""
+    },
+    {
+      "from_id": "D7",
+      "to_id": "A17",
+      "label": "No – revise"
+    },
+    {
+      "from_id": "A21",
+      "to_id": "E2",
+      "label": ""
+    },
+    {
+      "from_id": "D7",
+      "to_id": "A22",
+      "label": "Yes"
+    },
+    {
+      "from_id": "A22",
+      "to_id": "E3",
+      "label": ""
+    },
+    {
+      "from_id": "D7",
+      "to_id": "D8",
+      "label": "No – end"
+    },
+    {
+      "from_id": "D8",
+      "to_id": "A21",
+      "label": "Yes"
+    },
+    {
+      "from_id": "D8",
+      "to_id": "A23",
+      "label": "No"
+    },
+    {
+      "from_id": "A23",
+      "to_id": "A24",
+      "label": ""
+    },
+    {
+      "from_id": "A24",
+      "to_id": "E2",
+      "label": ""
+    }
+  ],
+  "handoffs": [
+    {
+      "from_role_id": "R1",
+      "to_role_id": "R2",
+      "at_node_id": "A3",
+      "description": "Lead entry delegated to an Insightly seat holder"
+    },
+    {
+      "from_role_id": "R1",
+      "to_role_id": "R2",
+      "at_node_id": "A5",
+      "description": "Reassignment confirmed by Director of Operations"
+    },
+    {
+      "from_role_id": "R1",
+      "to_role_id": "R3",
+      "at_node_id": "A6",
+      "description": "Identifier becomes, or hands to, the lead owner"
+    },
+    {
+      "from_role_id": "R3",
+      "to_role_id": "R5",
+      "at_node_id": "A10",
+      "description": "Team members asked for materials and inputs for meeting prep"
+    },
+    {
+      "from_role_id": "R3",
+      "to_role_id": "R2",
+      "at_node_id": "A13",
+      "description": "Lead-to-opportunity conversion delegated"
+    },
+    {
+      "from_role_id": "R3",
+      "to_role_id": "R4",
+      "at_node_id": "A15",
+      "description": "Ownership passes to the opportunity lead once determined"
+    },
+    {
+      "from_role_id": "R4",
+      "to_role_id": "R6",
+      "at_node_id": "A18",
+      "description": "Discussion document sent for review"
+    },
+    {
+      "from_role_id": "R4",
+      "to_role_id": "R4",
+      "at_node_id": "A22",
+      "description": "Exit to the SOW / proposal process (separately documented)"
+    },
+    {
+      "from_role_id": "R2",
+      "to_role_id": "R3",
+      "at_node_id": "A6",
+      "description": "Confirmed lead owner takes over outreach"
+    },
+    {
+      "from_role_id": "R4",
+      "to_role_id": "R2",
+      "at_node_id": "A23",
+      "description": "Closure delegated to an Insightly seat holder"
+    }
+  ],
+  "dependencies": [
+    {
+      "node_id": "A2",
+      "depends_on": "Insightly seat / edit access",
+      "type": "system"
+    },
+    {
+      "node_id": "A6",
+      "depends_on": "Sales plays and service-line introduction documents",
+      "type": "information"
+    },
+    {
+      "node_id": "A10",
+      "depends_on": "Availability of subject-matter experts and existing materials",
+      "type": "information"
+    },
+    {
+      "node_id": "A17",
+      "depends_on": "Meeting transcript / notes from A11",
+      "type": "information"
+    },
+    {
+      "node_id": "A19",
+      "depends_on": "Reviewer / SME availability if review is required",
+      "type": "approval"
+    },
+    {
+      "node_id": "A22",
+      "depends_on": "ELT approval within the proposal process",
+      "type": "approval"
+    }
+  ],
+  "pain_points": [
+    {
+      "id": "P1",
+      "node_id": "D1",
+      "description": "Limited Insightly seats mean the 'request assistance' loop recurs at three points (add lead, convert lead, close opportunity).",
+      "category": "manual",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:53:53",
+          "quote": "do we also have to do the whole do you have insightly access? ... This is painful."
+        },
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:53:53",
+          "quote": "do we also have to do the whole do you have insightly access?"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:01:42",
+          "quote": "might not actually have a seat or access edit access"
+        }
+      ],
+      "frequency": "per_week",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P2",
+      "node_id": "A6",
+      "description": "Team members forget to BCC the Insightly email address; the manual lookup takes 30–60 seconds per email and communications are lost from the record when skipped.",
+      "category": "manual",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:27:53",
+          "quote": "every once in a while I forget about it... It's hard to remember when you're doing daily work"
+        }
+      ],
+      "frequency": "per_day",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P3",
+      "node_id": "A7",
+      "description": "No contact history surfaced at outreach time, so owners may over-contact a lead or pitch a service line the lead already declined.",
+      "category": "missing-rule",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:29:35",
+          "quote": "I've sent her now 10 emails in two week increments and she never responded"
+        }
+      ],
+      "frequency": "per_week",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P4",
+      "node_id": "D3",
+      "description": "No defined criteria for when to cease outreach; it is currently a judgment call. Flagged as an open action item.",
+      "category": "missing-rule",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:33:49",
+          "quote": "incorporate a list of reasons we would cease outreach"
+        },
+        {
+          "file": "sales_process_walkthrough_jordyn.md",
+          "location": "00:04:48",
+          "quote": "maybe we reach a point where, okay, we're no longer going to be contacting them"
+        }
+      ],
+      "frequency": "per_week",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P5",
+      "node_id": "A8",
+      "description": "Contacts that were once leads should still receive periodic nurture (white papers, campaigns) on a priority cadence, but there is no mechanism for this today.",
+      "category": "missing-rule",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:32:49",
+          "quote": "you would never turn a lead into a contact and never ever reach out to him or her again"
+        }
+      ],
+      "frequency": "per_month",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P6",
+      "node_id": "A5",
+      "description": "Lead reassignment decisions tend to escalate to the ELT, pulling leadership into minutia; no sales director role exists to absorb this.",
+      "category": "ownership",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:23:09",
+          "quote": "if everything goes to the ELT it's kind of the ELT gets into the minutia"
+        }
+      ],
+      "frequency": "ad_hoc",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P7",
+      "node_id": "A10",
+      "description": "Meeting preparation is frequently skipped or under-done; the team lacks a consistent step for identifying attendees and existing materials.",
+      "category": "friction",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:34:45",
+          "quote": "a step that I think we often miss is really prepping for said meeting"
+        }
+      ],
+      "frequency": "per_week",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P8",
+      "node_id": "A19",
+      "description": "Historically the opportunity meeting was only scheduled after the discussion document was ready, delaying the sales cycle while waiting on the prospect's calendar.",
+      "category": "delay",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:49:01",
+          "quote": "we used to schedule the meeting right here and that delays this"
+        }
+      ],
+      "frequency": "per_month",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P9",
+      "node_id": "A15",
+      "description": "Ownership can become unclear when the lead owner lacks the expertise for the opportunity and wants to hand it to a specialist ('throwing it over the wall').",
+      "category": "ownership",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:42:59",
+          "quote": "it is not [Lead Owner]'s area of expertise it was actually [service-line lead]"
+        }
+      ],
+      "frequency": "ad_hoc",
+      "frequency_basis": "estimated"
+    },
+    {
+      "id": "P10",
+      "node_id": "A18",
+      "description": "Review of the discussion document is not formalised; whether a four-eyes review happens depends on who is involved and whether price is mentioned.",
+      "category": "missing-rule",
+      "source_refs": [
+        {
+          "file": "sales_process_mapping_transcript.md",
+          "location": "00:47:48",
+          "quote": "is a review necessary... depends"
+        }
+      ],
+      "frequency": "per_month",
+      "frequency_basis": "estimated"
+    }
+  ],
+  "open_questions": [
+    "Define the list of reasons / criteria for ceasing outreach to a lead (action item from workshop).",
+    "Confirm who approves lead reassignment when the identifier should not own outreach (Director of Operations vs ELT).",
+    "Decide whether the meeting-prep subprocess and the opportunity-lead subprocess should be documented at SOP level.",
+    "Confirm the nurture cadence (priority tiers) for leads converted back to contacts."
+  ]
+}

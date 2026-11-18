@@ -1,0 +1,956 @@
+{
+  "schema": "cgs.compass.painpoints/v0.2",
+  "account_id": "ACC-0001",
+  "generated": {
+    "by": "CGS Stage 1 process discovery",
+    "at": "2026-11-18T22:31:36+00:00",
+    "mode": "replay",
+    "models": [
+      "claude-opus-5-5",
+      "claude-sonnet-5-5"
+    ]
+  },
+  "process": {
+    "id": "P-01",
+    "name": "CGS Lead & Opportunity Management (Sales Process)",
+    "function_ref": null,
+    "owner_role": "Director of Operations",
+    "definition_status": "draft",
+    "swimlane_ref": null
+  },
+  "activities": [
+    {
+      "activity_ref": "A1",
+      "name": "Identify lead",
+      "role_ref": "Lead Identifier (any team member)",
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        20.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      }
+    },
+    {
+      "activity_ref": "D1",
+      "name": "Has Insightly access?",
+      "role_ref": "Lead Identifier (any team member)",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 0.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "activity_ref": "A2",
+      "name": "Add lead to Insightly",
+      "role_ref": "Lead Identifier (any team member)",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        15.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A3",
+      "name": "Request lead entry",
+      "role_ref": "Lead Identifier (any team member)",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "human_minutes_range": [
+        2.0,
+        10.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A4",
+      "name": "Add lead to Insightly",
+      "role_ref": "Director of Operations",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        15.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "D2",
+      "name": "Direct outreach by identifier?",
+      "role_ref": "Lead Identifier (any team member)",
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "human_minutes_range": [
+        2.0,
+        15.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "A5",
+      "name": "Confirm lead assignment",
+      "role_ref": "Director of Operations",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        30.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "A6",
+      "name": "Contact lead",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 20.0,
+      "human_minutes_range": [
+        10.0,
+        30.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      },
+      "tools": [
+        "TL-08 · Insightly",
+        "TL-01 · Gmail"
+      ]
+    },
+    {
+      "activity_ref": "D3",
+      "name": "Lead responds?",
+      "role_ref": "Lead Owner",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 2.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "A7",
+      "name": "Repeat outreach",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 30.0,
+      "human_minutes_range": [
+        10.0,
+        60.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      },
+      "tools": [
+        "TL-01 · Gmail",
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A8",
+      "name": "Transition lead to contact",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "human_minutes_range": [
+        2.0,
+        10.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A9",
+      "name": "Schedule lead meeting",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        20.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-01 · Calendar"
+      ]
+    },
+    {
+      "activity_ref": "A10",
+      "name": "Prepare for lead meeting",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 60.0,
+      "human_minutes_range": [
+        30.0,
+        120.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      }
+    },
+    {
+      "activity_ref": "A11",
+      "name": "Conduct lead meeting",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C2",
+      "human_minutes_per_cycle": 45.0,
+      "human_minutes_range": [
+        30.0,
+        60.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "stated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      },
+      "tools": [
+        "TL-03 · Gemini"
+      ]
+    },
+    {
+      "activity_ref": "D4",
+      "name": "Opportunity with this lead?",
+      "role_ref": "Lead Owner",
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 15.0,
+      "human_minutes_range": [
+        5.0,
+        30.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "D5",
+      "name": "Has Insightly access?",
+      "role_ref": "Lead Owner",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 0.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "activity_ref": "A12",
+      "name": "Convert lead to opportunity",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A13",
+      "name": "Request lead conversion",
+      "role_ref": "Lead Owner",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A14",
+      "name": "Convert lead to opportunity",
+      "role_ref": "Director of Operations",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A15",
+      "name": "Determine opportunity lead",
+      "role_ref": "Lead Owner",
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 30.0,
+      "human_minutes_range": [
+        15.0,
+        60.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "A16",
+      "name": "Assemble exploration team",
+      "role_ref": "Opportunity Lead",
+      "purpose": "intent",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 20.0,
+      "human_minutes_range": [
+        10.0,
+        30.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "A17",
+      "name": "Prepare discussion document",
+      "role_ref": "Opportunity Lead",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 180.0,
+      "human_minutes_range": [
+        120.0,
+        480.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      },
+      "tools": [
+        "TL-02 · Docs"
+      ]
+    },
+    {
+      "activity_ref": "D6",
+      "name": "Review required?",
+      "role_ref": "Opportunity Lead",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 2.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "A18",
+      "name": "Review discussion document",
+      "role_ref": "Reviewer (Service Line Lead / Leadership)",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 30.0,
+      "human_minutes_range": [
+        15.0,
+        60.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      }
+    },
+    {
+      "activity_ref": "A19",
+      "name": "Schedule opportunity meeting",
+      "role_ref": "Opportunity Lead",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        20.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-01 · Calendar"
+      ]
+    },
+    {
+      "activity_ref": "A20",
+      "name": "Conduct opportunity meeting",
+      "role_ref": "Opportunity Lead",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 60.0,
+      "human_minutes_range": [
+        45.0,
+        90.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      }
+    },
+    {
+      "activity_ref": "D7",
+      "name": "Aligned on the offering?",
+      "role_ref": "Opportunity Lead",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "human_minutes_range": [
+        2.0,
+        10.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      }
+    },
+    {
+      "activity_ref": "A22",
+      "name": "Develop proposal",
+      "role_ref": "Opportunity Lead",
+      "purpose": "execution",
+      "control_now": "C2",
+      "human_minutes_per_cycle": null,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      },
+      "tools": [
+        "TL-08 · Insightly",
+        "Proposal agent"
+      ]
+    },
+    {
+      "activity_ref": "D8",
+      "name": "Has Insightly access?",
+      "role_ref": "Opportunity Lead",
+      "purpose": "audit",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 0.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      }
+    },
+    {
+      "activity_ref": "A21",
+      "name": "Close opportunity",
+      "role_ref": "Opportunity Lead",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        15.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A23",
+      "name": "Request opportunity closure",
+      "role_ref": "Opportunity Lead",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 5.0,
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    },
+    {
+      "activity_ref": "A24",
+      "name": "Close opportunity",
+      "role_ref": "Director of Operations",
+      "purpose": "execution",
+      "control_now": "C0",
+      "human_minutes_per_cycle": 10.0,
+      "human_minutes_range": [
+        5.0,
+        15.0
+      ],
+      "basis": {
+        "purpose": "estimated",
+        "control_now": "estimated",
+        "human_minutes_per_cycle": "estimated"
+      },
+      "tools": [
+        "TL-08 · Insightly"
+      ]
+    }
+  ],
+  "pain_points": [
+    {
+      "id": "PP-01",
+      "activity_ref": "D1",
+      "role_ref": "Lead Identifier (any team member)",
+      "description": "Limited Insightly seats mean the 'request assistance' loop recurs at three points (add lead, convert lead, close opportunity).",
+      "type": "manual_data",
+      "source_category": "manual",
+      "frequency": "per_week",
+      "frequency_basis": "estimated",
+      "data_touched": [
+        {
+          "system": "Insightly",
+          "tool_id": "TL-08",
+          "on_cgs_list": true,
+          "in_workspace": false,
+          "drive_ref": null
+        }
+      ],
+      "human_judgment": {
+        "present": false,
+        "reason_stated": null
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:53:53",
+          "quote": "do we also have to do the whole do you have insightly access? ... This is painful.",
+          "grounded": null
+        },
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:53:53",
+          "quote": "do we also have to do the whole do you have insightly access?",
+          "grounded": null
+        },
+        {
+          "transcript_ref": "sales_process_walkthrough_jordyn.md @ 00:01:42",
+          "quote": "might not actually have a seat or access edit access",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.9
+    },
+    {
+      "id": "PP-02",
+      "activity_ref": "A6",
+      "role_ref": "Lead Owner",
+      "description": "Team members forget to BCC the Insightly email address; the manual lookup takes 30–60 seconds per email and communications are lost from the record when skipped.",
+      "type": "manual_data",
+      "source_category": "manual",
+      "frequency": "per_day",
+      "frequency_basis": "estimated",
+      "data_touched": [
+        {
+          "system": "Insightly",
+          "tool_id": "TL-08",
+          "on_cgs_list": true,
+          "in_workspace": false,
+          "drive_ref": null
+        },
+        {
+          "system": "Gmail",
+          "tool_id": "TL-01",
+          "on_cgs_list": true,
+          "in_workspace": true,
+          "drive_ref": null
+        }
+      ],
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:27:53",
+          "quote": "every once in a while I forget about it... It's hard to remember when you're doing daily work",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    },
+    {
+      "id": "PP-03",
+      "activity_ref": "A7",
+      "role_ref": "Lead Owner",
+      "description": "No contact history surfaced at outreach time, so owners may over-contact a lead or pitch a service line the lead already declined.",
+      "type": "unclear_decision",
+      "source_category": "missing-rule",
+      "frequency": "per_week",
+      "frequency_basis": "estimated",
+      "data_touched": [
+        {
+          "system": "Gmail",
+          "tool_id": "TL-01",
+          "on_cgs_list": true,
+          "in_workspace": true,
+          "drive_ref": null
+        },
+        {
+          "system": "Insightly",
+          "tool_id": "TL-08",
+          "on_cgs_list": true,
+          "in_workspace": false,
+          "drive_ref": null
+        }
+      ],
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:29:35",
+          "quote": "I've sent her now 10 emails in two week increments and she never responded",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    },
+    {
+      "id": "PP-04",
+      "activity_ref": "D3",
+      "role_ref": "Lead Owner",
+      "description": "No defined criteria for when to cease outreach; it is currently a judgment call. Flagged as an open action item.",
+      "type": "unclear_decision",
+      "source_category": "missing-rule",
+      "frequency": "per_week",
+      "frequency_basis": "estimated",
+      "data_touched": [],
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:33:49",
+          "quote": "incorporate a list of reasons we would cease outreach",
+          "grounded": null
+        },
+        {
+          "transcript_ref": "sales_process_walkthrough_jordyn.md @ 00:04:48",
+          "quote": "maybe we reach a point where, okay, we're no longer going to be contacting them",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.9
+    },
+    {
+      "id": "PP-05",
+      "activity_ref": "A8",
+      "role_ref": "Lead Owner",
+      "description": "Contacts that were once leads should still receive periodic nurture (white papers, campaigns) on a priority cadence, but there is no mechanism for this today.",
+      "type": "unclear_decision",
+      "source_category": "missing-rule",
+      "frequency": "per_month",
+      "frequency_basis": "estimated",
+      "data_touched": [
+        {
+          "system": "Insightly",
+          "tool_id": "TL-08",
+          "on_cgs_list": true,
+          "in_workspace": false,
+          "drive_ref": null
+        }
+      ],
+      "human_judgment": {
+        "present": false,
+        "reason_stated": null
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:32:49",
+          "quote": "you would never turn a lead into a contact and never ever reach out to him or her again",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    },
+    {
+      "id": "PP-06",
+      "activity_ref": "A5",
+      "role_ref": "Director of Operations",
+      "description": "Lead reassignment decisions tend to escalate to the ELT, pulling leadership into minutia; no sales director role exists to absorb this.",
+      "type": "handoff",
+      "source_category": "ownership",
+      "frequency": "ad_hoc",
+      "frequency_basis": "estimated",
+      "data_touched": [],
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:23:09",
+          "quote": "if everything goes to the ELT it's kind of the ELT gets into the minutia",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    },
+    {
+      "id": "PP-07",
+      "activity_ref": "A10",
+      "role_ref": "Lead Owner",
+      "description": "Meeting preparation is frequently skipped or under-done; the team lacks a consistent step for identifying attendees and existing materials.",
+      "type": "other",
+      "source_category": "friction",
+      "frequency": "per_week",
+      "frequency_basis": "estimated",
+      "data_touched": [],
+      "human_judgment": {
+        "present": true,
+        "reason_stated": true
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:34:45",
+          "quote": "a step that I think we often miss is really prepping for said meeting",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    },
+    {
+      "id": "PP-08",
+      "activity_ref": "A19",
+      "role_ref": "Opportunity Lead",
+      "description": "Historically the opportunity meeting was only scheduled after the discussion document was ready, delaying the sales cycle while waiting on the prospect's calendar.",
+      "type": "delay",
+      "source_category": "delay",
+      "frequency": "per_month",
+      "frequency_basis": "estimated",
+      "data_touched": [
+        {
+          "system": "Calendar",
+          "tool_id": "TL-01",
+          "on_cgs_list": true,
+          "in_workspace": true,
+          "drive_ref": null
+        }
+      ],
+      "human_judgment": {
+        "present": false,
+        "reason_stated": null
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:49:01",
+          "quote": "we used to schedule the meeting right here and that delays this",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    },
+    {
+      "id": "PP-09",
+      "activity_ref": "A15",
+      "role_ref": "Lead Owner",
+      "description": "Ownership can become unclear when the lead owner lacks the expertise for the opportunity and wants to hand it to a specialist ('throwing it over the wall').",
+      "type": "handoff",
+      "source_category": "ownership",
+      "frequency": "ad_hoc",
+      "frequency_basis": "estimated",
+      "data_touched": [],
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:42:59",
+          "quote": "it is not [Lead Owner]'s area of expertise it was actually [service-line lead]",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    },
+    {
+      "id": "PP-10",
+      "activity_ref": "A18",
+      "role_ref": "Reviewer (Service Line Lead / Leadership)",
+      "description": "Review of the discussion document is not formalised; whether a four-eyes review happens depends on who is involved and whether price is mentioned.",
+      "type": "unclear_decision",
+      "source_category": "missing-rule",
+      "frequency": "per_month",
+      "frequency_basis": "estimated",
+      "data_touched": [],
+      "human_judgment": {
+        "present": true,
+        "reason_stated": false
+      },
+      "evidence": [
+        {
+          "transcript_ref": "sales_process_mapping_transcript.md @ 00:47:48",
+          "quote": "is a review necessary... depends",
+          "grounded": null
+        }
+      ],
+      "confidence": 0.7
+    }
+  ],
+  "open_questions": [
+    "Define the list of reasons / criteria for ceasing outreach to a lead (action item from workshop).",
+    "Confirm who approves lead reassignment when the identifier should not own outreach (Director of Operations vs ELT).",
+    "Decide whether the meeting-prep subprocess and the opportunity-lead subprocess should be documented at SOP level.",
+    "Confirm the nurture cadence (priority tiers) for leads converted back to contacts."
+  ]
+}
