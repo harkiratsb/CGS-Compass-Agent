@@ -354,3 +354,23 @@ def test_answers_survive_rerun_ai_steps_and_ai_output_is_ignored(monkeypatch, de
     _check_kept(run)                     # the AI states doc_gate 3 = Y, outcome, D1 R2 = Y, and A7 dials
     later = [u for u in prompts if u.startswith("[STEP:part2_context]")]
     assert later and "A signed SOW" in later[0]          # prompts see the person's answers
+
+
+def test_cache_holds_ai_only_state_not_a_sessions_answers(live, demo_model, settings):
+    from framework.rules import answer_and_rescore, undo_answer
+    first = run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings)
+    ai_value = first.context["outcome"].value
+    p = answer_and_rescore(first, demo_model, "context.outcome", "A signed SOW", settings)
+    p = answer_and_rescore(p, demo_model, "steps.A2.accountability", "Y", settings)
+    again = run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings, prior=p)
+    assert again.context["outcome"].value == "A signed SOW"           # the person's answer is kept live
+    # (b) a fresh session with the same materials does not inherit those answers
+    fresh = run_framework(demo_model, [], map_reviewed=True, s=settings)
+    assert fresh.context["outcome"].basis != "answered" and fresh.context["outcome"].value == ai_value
+    assert fresh.steps["A2"].accountability.basis != "answered"
+    assert not fresh.steps["A2"].accountability.history
+    # (a) undoing in the same session does not bring the answer back
+    u = undo_answer(again, demo_model, "context.outcome", settings)
+    r = run_framework(demo_model, [], map_reviewed=True, s=settings, prior=u)
+    assert r.context["outcome"].basis != "answered" and r.context["outcome"].value == ai_value
+    assert r.steps["A2"].accountability.value == "Y"                  # still answered in prior

@@ -54,14 +54,14 @@ def test_not_kept_step_skips_scoring_families(demo_model, all_assumed_run, setti
 
 
 def test_made_unnecessary_step_skips_scoring_families(demo_model, acceptance_run, settings):
-    # A6 is a kept Agent step in the acceptance run; mark A11 unnecessary because of it
+    # A6 is a kept Agent step in the acceptance run; mark A10 (not protected) unnecessary because of it
     assert acceptance_run.steps["A6"].tier.tier == "Agent"
     run = acceptance_run.model_copy(deep=True)
-    run.steps["A11"].made_unnecessary_by = "A6"
-    run.steps["A11"].dials["stakes"] = Answer(value=3, question="Stakes?")
+    run.steps["A10"].made_unnecessary_by = "A6"
+    run.steps["A10"].dials["stakes"] = Answer(value=3, question="Stakes?")
     out = apply_rules(run, demo_model, settings)
-    assert out.steps["A11"].made_unnecessary_by == "A6"
-    assert not _fams(out, "A11") & {"tier1", "dials", "agent_test", "readiness"}
+    assert out.steps["A10"].made_unnecessary_by == "A6"
+    assert not _fams(out, "A10") & {"tier1", "dials", "agent_test", "readiness"}
 
 
 def test_follow_ups_main_path_steps_before_the_rest(demo_model, all_assumed_run, settings):

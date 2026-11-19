@@ -418,7 +418,7 @@ def _apply_agent_marks(run: FrameworkRun, ids: list[str], model: ProcessModel) -
 
     The effective made_unnecessary_by is derived from ai_made_unnecessary_by on every pass, so an
     answer that clears it and an undo that brings it back both work. A mark holds only while the
-    step's own call is Keep and the target is a kept Agent step that is not itself marked (mutual
+    step's own call is Keep, it is not protected and the target is a kept Agent step that is not itself marked (mutual
     pairs clear both)."""
     for st in run.steps.values():
         if st.made_unnecessary_by and not st.ai_made_unnecessary_by:   # runs saved before the split
@@ -431,7 +431,8 @@ def _apply_agent_marks(run: FrameworkRun, ids: list[str], model: ProcessModel) -
         by = st.ai_made_unnecessary_by
         target = run.steps.get(by)
         if (by not in on_map or by in marked or target is None or target.tier is None
-                or target.tier.tier != "Agent" or target.call != "Keep" or st.call != "Keep"):
+                or target.tier.tier != "Agent" or target.call != "Keep" or st.call != "Keep"
+                or st.protected):      # a decision or an accountable step is never removed by a mark
             continue
         st.made_unnecessary_by = by
         st.call, st.call_rule, st.combine_target = "Remove", "Agent", None

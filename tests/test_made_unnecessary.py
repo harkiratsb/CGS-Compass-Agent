@@ -68,3 +68,20 @@ def test_mark_ignored_on_a_step_that_is_not_kept(all_assumed_run, demo_model, se
     run.steps["A3"].ai_made_unnecessary_by = "A7"
     out = apply_rules(run, demo_model, settings)
     assert out.steps["A3"].call == "Fix the map" and out.steps["A3"].made_unnecessary_by is None
+
+
+def test_mark_does_not_remove_a_protected_step(all_assumed_run, demo_model, settings):
+    run = all_assumed_run.model_copy(deep=True)
+    _agentify(run, "A7")
+    run.steps["A3"].accountability = Answer(value="Y", basis="answered")
+    run.steps["A3"].ai_made_unnecessary_by = "A7"
+    out = apply_rules(run, demo_model, settings)
+    assert out.steps["A3"].protected and out.steps["A3"].call == "Keep"
+    assert out.steps["A3"].made_unnecessary_by is None and out.steps["A3"].call_rule != "Agent"
+    # a decision is protected too
+    dec = demo_model.decisions[0].id
+    run2 = all_assumed_run.model_copy(deep=True)
+    _agentify(run2, "A7")
+    run2.steps[dec].ai_made_unnecessary_by = "A7"
+    out2 = apply_rules(run2, demo_model, settings)
+    assert out2.steps[dec].call == "Keep" and out2.steps[dec].made_unnecessary_by is None

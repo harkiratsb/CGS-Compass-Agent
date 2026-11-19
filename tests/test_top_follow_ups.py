@@ -70,3 +70,19 @@ def test_cached_until_the_run_changes(monkeypatch, demo_model, all_assumed_run, 
     ensure_top_questions(after, demo_model, settings)
     assert len(calls) == 2
     assert len(run.follow_ups) > len(first)                # run.follow_ups stays complete
+
+
+def test_grouped_removal_question_tries_each_member_alone(demo):
+    from framework.models import Answer
+    run, model, s, names = demo
+    r = run.model_copy(deep=True)
+    for k in list(r.steps["A1"].r_pass1):
+        r.steps["A1"].r_pass1[k] = Answer(value="N", basis="assumed", question=f"{k}?")
+    r.steps["A1"].r_pass2.clear()
+    r.steps["A1"].r_pass1["R2"] = Answer(value="Y", basis="assumed", question="R2?")
+    r = apply_rules(r, model, s, names)
+    assert r.steps["A1"].call == "Remove" and r.steps["A1"].call_rule == "R2"
+    t0 = time.time()
+    top = top_follow_ups(r, model, s, names, n=500)
+    assert time.time() - t0 < 4
+    assert any(q.step_id == "A1" and "call" in q.effect for q in top)

@@ -267,6 +267,11 @@ def top_follow_ups(run: FrameworkRun, model: ProcessModel, s: Settings, names: l
     ranked = []
     for seq, c in enumerate(_step_candidates(run, model, s, facts)):
         level, what = _effect(base, _try(run, model, s, names, c.values), model)
+        if len(c.values) > 1 and all(".r_pass1." in p for p in c.values):
+            for p, v in c.values.items():       # the group flips every test; also try each one alone
+                lv, wh = _effect(base, _try(run, model, s, names, {p: v}), model)
+                if lv > level:
+                    level, what = lv, wh
         if level:
             ranked.append(((-level, c.step_id not in facts.main_path, order.get(c.step_id, 0), seq), c, what))
     ranked.sort(key=lambda x: x[0])

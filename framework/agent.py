@@ -29,7 +29,7 @@ from framework.models import (
     DIAL_KEYS, R_KEYS, R_MOVE, READINESS_KEYS, SCORE, YN, YNU, YPN, Answer, ChainStep, FrameworkRun,
     MapCheck, assumed, blank_run, get_answer,
 )
-from framework.rules import (_step_answers, answered_answers, answers_key, apply_rules, carry_answers,
+from framework.rules import (_HISTORY_FIELDS, _locate, _put, _step_answers, answered_answers, answers_key, apply_rules, carry_answers,
                              chain_compatible)
 from framework.settings import Settings, load_settings
 from cgs_tools import tags_for
@@ -627,6 +627,30 @@ def _saved(key: str) -> FrameworkRun | None:
     return None
 
 
+def _ai_only(run: FrameworkRun, model: ProcessModel, s: Settings, names: list[str] | None) -> FrameworkRun:
+    """A copy of `run` with every person's answer rolled back to its pre-answer state (the first
+    history entry that is not an answer; blank default when the answer created the slot), so the
+    cache never holds one session's answers."""
+    out = run.model_copy(deep=True)
+    blank = blank_run(model, "live", s)
+    for path, a in answered_answers(out).items():
+        before = next((h for h in a.history if h.get("basis") != "answered"), None)
+        try:
+            container, key, is_attr = _locate(out, path)
+        except KeyError:
+            continue
+        if before is not None and not before.get("absent"):
+            fields = {f: before[f] for f in _HISTORY_FIELDS if f in before}
+            _put(container, key, is_attr, Answer(**fields, quotes=before.get("quotes", [])))
+            continue
+        try:
+            fresh = get_answer(blank, path)
+        except KeyError:
+            fresh = None
+        _put(container, key, is_attr, fresh)
+    return apply_rules(out, model, s, names)
+
+
 def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: AgentRun | None = None,
                   map_reviewed: bool, success_end: str | None = None, force_live: bool = False,
                   progress: Callable[[AgentStep], None] | None = None, s: Settings | None = None,
@@ -712,5 +736,6 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
     run.summary_answers_key = answers_key(run)
     if not failed:   # a run with a failed AI step is never cached, so the next run retries it
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        (CACHE_DIR / f"framework_{key}.json").write_text(run.model_dump_json(indent=2))
+        cached = _ai_only(run, model, s, names) if carried else run
+        (CACHE_DIR / f"framework_{key}.json").write_text(cached.model_dump_json(indent=2))
     return run
