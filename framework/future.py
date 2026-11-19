@@ -9,9 +9,13 @@ AUTOMATION_ROLE_ID = "R_AUTO"
 _MARKER = {"Rules": "rules", "Agent": "agent", "Human approval": "approval", "Human task": "task"}
 
 
-def build_future_model(model: ProcessModel, run: FrameworkRun,
-                       show_removed: bool = False) -> tuple[ProcessModel, dict[str, str]]:
-    """Return (future model, {node_id: marker}). The input model is not changed."""
+def build_future_model(model: ProcessModel, run: FrameworkRun, show_removed: bool = False,
+                       names: list[str] | None = None) -> tuple[ProcessModel, dict[str, str]]:
+    """Return (future model, {node_id: marker}). The input model is not changed.
+
+    With `names`, the text drawn on the diagram (step names, notes, decision questions,
+    role names, sticky-note pain points) goes through the same names safety net as the
+    exports, so AI-written chain step names can't carry a personal name onto the map."""
     facts = graph_facts(model, run.success_end)
     on_main = set(facts.main_path) | ({facts.success_end} if facts.success_end else set())
     acts = {a.id: a for a in model.activities}
@@ -167,4 +171,27 @@ def build_future_model(model: ProcessModel, run: FrameworkRun,
     future = model.model_copy(deep=True, update={
         "roles": roles, "activities": new_acts, "decisions": new_decs, "edges": edges,
         "handoffs": handoffs, "dependencies": deps, "pain_points": pains})
+    if names:
+        _scrub_names(future, names)
     return future, markers
+
+
+def _scrub_names(m: ProcessModel, names: list[str]) -> None:
+    """Replace personal names in every label the swimlane and draw.io draw (in place)."""
+    from framework.outputs import _clean
+
+    for r in m.roles:
+        r.name, r.description = _clean(r.name, names), _clean(r.description, names)
+    for a in m.activities:
+        a.name, a.notes = _clean(a.name, names), _clean(a.notes, names)
+        a.description = _clean(a.description, names)
+        a.assumptions = [_clean(x, names) for x in a.assumptions]
+    for d in m.decisions:
+        d.question = _clean(d.question, names)
+        for b in d.branches:
+            b.label = _clean(b.label, names)
+    for e in m.edges:
+        e.label = _clean(e.label, names)
+    for p in m.pain_points:
+        p.description = _clean(p.description, names)
+    m.process.name = _clean(m.process.name, names)

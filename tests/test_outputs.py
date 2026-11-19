@@ -56,7 +56,9 @@ def test_names_removed(demo_model, acceptance_run):
 
 def test_follow_ups_process_first_and_deduped(demo_model, acceptance_run):
     md = follow_ups_markdown(acceptance_run, demo_model)
-    assert md.index("## Process") < md.index("## A1")
+    assert md.index("## Start here") < md.index("### A1")
+    if "## Other steps" in md:
+        assert md.index("## Steps on the main path") < md.index("## Other steps")
     qs = [l for l in md.splitlines() if l.startswith("- ")]
     assert len(qs) == len(set(qs))
 

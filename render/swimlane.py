@@ -204,6 +204,26 @@ def _layout_slots(model: ProcessModel):
     return used_roles, slot, col, n_rows, len(orders)
 
 
+_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"     # no I or O (read as 1 and 0)
+
+
+def connector_letters():
+    """A, B, … Z, then AA, AB, … AZ, BA, … with no limit (I and O skipped throughout)."""
+    width = 1
+    while True:
+        idx = [0] * width
+        while True:
+            yield "".join(_LETTERS[i] for i in idx)
+            j = width - 1
+            while j >= 0 and idx[j] == len(_LETTERS) - 1:
+                idx[j] = 0
+                j -= 1
+            if j < 0:
+                break
+            idx[j] += 1
+        width += 1
+
+
 def build_geometry(model: ProcessModel, show_stickies: bool = True, title: Optional[str] = None,
                    show_tools: bool = True) -> Geometry:
     used_roles, slot, col, n_rows, n_cols = _layout_slots(model)
@@ -503,7 +523,7 @@ def _route_all(model, nodes: Dict[str, NodeGeo], stickies: List[StickyGeo], lane
 
     # ---- lettered in-page connectors (backward jumps across lanes, very long loops, or unroutable)
     legend = []
-    letters = iter("ABCDEFGHJKLMNPQRSTUVWXYZ")
+    letters = connector_letters()
     for i, e in lettered:
         letter = next(letters)
         src, tgt = nodes[e.from_id], nodes[e.to_id]

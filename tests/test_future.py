@@ -109,3 +109,24 @@ def test_handoffs_and_pain_points_follow_dropped_and_chained_nodes(demo_model, a
     assert "P1" not in pains          # D1 was removed
     assert pains["P2"] == "A6.1"      # A6 became a chain
     assert any(h.at_node_id == "A6.1" for h in fut.handoffs)
+
+
+def test_future_model_scrubs_names_from_every_label(demo_model, acceptance_run):
+    from framework.models import ChainStep
+    from render.drawio import render_drawio
+    from render.swimlane import build_geometry, render_svg
+
+    run = acceptance_run.model_copy(deep=True)
+    model = demo_model.model_copy(deep=True)
+    model.roles[0].name = "Elizabeth's team"
+    model.decisions[0].question = "Did Liz approve?"
+    st = run.steps["A2"]
+    st.recommendation.chain = [ChainStep(name="Ask Elizabeth", type="Rules"),
+                               ChainStep(name="Enter lead for Liz", type="Human task")]
+    fm, markers = build_future_model(model, run, names=["Elizabeth"])
+    g = build_geometry(fm)
+    for text in (render_svg(fm, markers=markers, geometry=g), render_drawio(fm, g, markers)):
+        assert "Elizabeth" not in text and "Liz" not in text
+        assert "[team member]" in text
+    plain, _ = build_future_model(model, run)          # without names nothing is changed
+    assert any("Ask Elizabeth" in a.name for a in plain.activities)

@@ -11,12 +11,11 @@ import os
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 from framework.agent import framework_hash, run_framework
 from framework.future import build_future_model
 from framework.models import Answer, FrameworkRun, allowed_values
-from framework.outputs import follow_ups_markdown, step_table, step_table_csv, summary_markdown
+from framework.outputs import follow_up_groups, follow_ups_markdown, step_table, step_table_csv, summary_markdown
 from framework.rules import _step_answers, _tier_label, answer_and_rescore, apply_rules, undo_answer
 from framework.settings import load_settings
 from handoff import _scrub
@@ -85,10 +84,8 @@ def _set_run(run: FrameworkRun | None):
 
 
 def _answer(c: _Ctx, run: FrameworkRun, path: str, value) -> FrameworkRun:
-    """Record one answer and rescore. The names are passed again so the roles-not-people gate
-    check sees them (answer_and_rescore re-runs the rules without names)."""
-    new = answer_and_rescore(run, c.model, path, value, c.s)
-    return apply_rules(new, c.model, c.s, c.names)
+    """Record one answer and rescore (code only); names keep the roles-not-people gate check right."""
+    return answer_and_rescore(run, c.model, path, value, c.s, names=c.names)
 
 
 def _quote(c: _Ctx, a: Answer) -> str:
@@ -153,8 +150,8 @@ def _run_screen(c: _Ctx):
         st.warning("The map isn't marked as reviewed. Check it against the materials and switch on **Mark map as "
                    "reviewed** on the Stage 1 Swimlane tab first; a run on an unreviewed map is recorded as such.")
     b1, b2, _ = st.columns([1, 1, 2])
-    go = b1.button("▶ Run framework", type="primary", use_container_width=True, key="p3_run")
-    again = b2.button("↻ Re-run AI steps", use_container_width=True, key="p3_rerun", disabled=not key_present,
+    go = b1.button("▶ Run framework", type="primary", width="stretch", key="p3_run")
+    again = b2.button("↻ Re-run AI steps", width="stretch", key="p3_rerun", disabled=not key_present,
                       help="Ignore the saved run and call the AI again" if key_present else "Needs ANTHROPIC_API_KEY")
     if go or again:
         prev = ss.framework
@@ -183,9 +180,6 @@ def _run_screen(c: _Ctx):
         return
     if run.mode == "replay":
         st.info("**Replay** of a pre-computed framework run for the demo map (no live API call).")
-    h = run.artifacts.get("input_hash")
-    if h and h != framework_hash(c.model, ss.parsed, c.s):
-        st.warning("The map or materials changed after this run. Run the framework again to score the current map.")
     m = st.columns(5)
     m[0].metric("Mode", run.mode)
     m[1].metric("Documentation", run.gate_band, f"score {run.gate_score:g}", delta_color="off")
@@ -249,10 +243,12 @@ def _gate_screen(c: _Ctx):
     ends = [a for a in c.model.activities if a.kind == "end"]
     if ends:
         ids = [a.id for a in ends]
-        idx = ids.index(run.success_end) if run.success_end in ids else 0
-        pick = st.selectbox("Success end (the end that means the process worked)", ids, index=idx,
-                            format_func=lambda i: f"{i} · {c.label(i)}")
-        if pick != run.success_end:
+        labels = [f"{i} · {c.clean(c.label(i))}" for i in ids]
+        idx = ids.index(run.success_end) if run.success_end in ids else None
+        picked = st.selectbox("Success end (the end that means the process worked)", labels, index=idx,
+                              placeholder="Choose the end that means the process worked…")
+        pick = ids[labels.index(picked)] if picked is not None else None
+        if pick is not None and pick != run.success_end:   # only an explicit choice changes it
             new = run.model_copy(deep=True)
             new.success_end = pick
             _set_run(apply_rules(new, c.model, c.s, c.names))
@@ -260,11 +256,11 @@ def _gate_screen(c: _Ctx):
 
     st.markdown("##### Documentation gate (8 checks)")
     st.dataframe(_answer_rows(c, [(f"{k} · {GATE_LABEL.get(k, '')}", a) for k, a in run.doc_gate.items()]),
-                 hide_index=True, use_container_width=True)
+                 hide_index=True, width="stretch")
     st.markdown("##### Context")
-    st.dataframe(_answer_rows(c, run.context.items()), hide_index=True, use_container_width=True)
+    st.dataframe(_answer_rows(c, run.context.items()), hide_index=True, width="stretch")
     st.markdown("##### Readiness (process defaults)")
-    st.dataframe(_answer_rows(c, run.readiness_defaults.items()), hide_index=True, use_container_width=True)
+    st.dataframe(_answer_rows(c, run.readiness_defaults.items()), hide_index=True, width="stretch")
     st.markdown("##### Map checks")
     if run.map_checks:
         for mc in run.map_checks:
@@ -320,7 +316,7 @@ def _steps_screen(c: _Ctx):
         st.info("No steps to show.")
         return
     st.caption("Select a row (or pick a step below) to see every answer behind its call.")
-    event = st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True, on_select="rerun",
+    event = st.dataframe(pd.DataFrame(rows).astype({"wave": str, "readiness": str}), hide_index=True, width="stretch", on_select="rerun",
                          selection_mode="single-row", key="p3_steps_table")
     ids = [r["step_id"] for r in rows]
     picked = getattr(getattr(event, "selection", None), "rows", None) or []
@@ -360,7 +356,7 @@ def _steps_screen(c: _Ctx):
         assumed_n = sum(a.basis == "assumed" for _, a in items)
         with st.expander(f"{FAMILY_LABEL.get(fam, fam)} — {len(items)} answers, {assumed_n} assumed"):
             st.dataframe(_answer_rows(c, [(s.split(".")[-1], a) for s, a in items]),
-                         hide_index=True, use_container_width=True)
+                         hide_index=True, width="stretch")
             with st.form(f"p3_form_{sid}_{fam}_{ver}"):
                 cols = st.columns(3)
                 widgets = {}
@@ -376,11 +372,10 @@ def _steps_screen(c: _Ctx):
         with st.expander(f"Undo an answer ({len(answered)} answered here)"):
             for suffix, a in answered:
                 u1, u2 = st.columns([3, 1])
-                u1.markdown(f"`{suffix}` = **{a.value}**")
+                u1.markdown(f"`{suffix}` = **{c.clean(a.value)}**")
                 if u2.button("Undo", key=f"p3_undo_{sid}_{suffix}_{ver}"):
                     try:
-                        new = undo_answer(run, c.model, f"steps.{sid}.{suffix}", c.s)
-                        _set_run(apply_rules(new, c.model, c.s, c.names))
+                        _set_run(undo_answer(run, c.model, f"steps.{sid}.{suffix}", c.s, names=c.names))
                         st.rerun()
                     except (ValueError, KeyError) as e:
                         st.error(str(e))
@@ -414,30 +409,26 @@ def _followups_screen(c: _Ctx):
     if run is None:
         return
     _show_msg("p3_msg_followups")
-    fus, seen = [], set()
-    for f in run.follow_ups:
-        if f.path not in seen:
-            seen.add(f.path)
-            fus.append(f)
+    groups = follow_up_groups(run, c.model, dedupe=False)   # every answer path gets its own input
+    total = sum(len(items) for _, _, items in groups)
     st.download_button("⬇ Download follow-ups (Markdown)", follow_ups_markdown(run, c.model, c.names),
                        file_name="follow_ups.md", mime="text/markdown", key="p3_dl_fu_top")
-    if not fus:
-        st.success("No follow-up questions: every input has evidence or an answer.")
+    if not total:
+        st.success("No follow-up questions: every input that could change a result has evidence or an answer.")
         return
-    st.caption(f"{len(fus)} inputs are assumed (framework default). Answer any of them and **Save answers**; "
-               "blank ones are left as they are. Saving rescores with code only — no AI call.")
+    st.caption(f"{total} assumed inputs could change a result. Start with the process facts, then the steps on "
+               "the main path. Answer any of them and **Save answers**; blank ones are left as they are. "
+               "Saving rescores with code only — no AI call.")
     ver = ss.get("p3_ver", 0)
     with st.form(f"p3_followups_{ver}"):
-        groups: dict[str, list] = {}       # process first, then steps in run order (as follow_ups gives them)
-        for f in fus:
-            parts = f.path.split(".")
-            groups.setdefault("Process" if parts[0] != "steps" else parts[1], []).append(f)
-        widgets = {}
-        for gi, (group, items) in enumerate(groups.items()):
-            title = "Process" if group == "Process" else f"{group} · {c.clean(c.label(group))}"
-            with st.expander(f"{title} — {len(items)} questions", expanded=gi == 0):
+        widgets, last = {}, None
+        for gi, (section, title, items) in enumerate(groups):
+            if section != last:
+                st.markdown(f"**{section}**")
+                last = section
+            with st.expander(f"{c.clean(title)} — {len(items)} questions", expanded=gi == 0):
                 for f in items:
-                    cur = "none" if f.current is None else f.current
+                    cur = "none" if f.current is None else c.clean(f.current)
                     widgets[f.path] = _input(f.path, None, key=f"p3_fu_{f.path}_{ver}", blank=True,
                                              label=f"{c.clean(f.question)} (now: {cur}, assumed)")
         if st.form_submit_button("Save answers", type="primary"):
@@ -456,7 +447,7 @@ def _future_screen(c: _Ctx):
     zoom = t2.slider("Zoom", 0.4, 1.6, 0.8, 0.05, key="p3_zoom")
     rows = step_table(run, c.model, c.names)
     summary = summary_markdown(run, c.model, c.names)
-    fm, markers = build_future_model(c.model, run, show_removed=show_removed)
+    fm, markers = build_future_model(c.model, run, show_removed=show_removed, names=c.names)
     title = f"{c.model.process.name} — future state"
     try:   # a diagram failure keeps the table, summary and the other exports
         geo = build_geometry(fm, title=title)
@@ -466,31 +457,31 @@ def _future_screen(c: _Ctx):
         st.error(f"The future-state diagram couldn't be drawn ({type(ex).__name__}: {ex}). "
                  "The step table, summary and other exports below are still complete.")
     else:
-        components.html(
+        st.iframe(
             f"""<div style="overflow:auto;border:1px solid #E5E7EB;border-radius:8px;background:#fff;padding:8px">
                   <div style="transform:scale({zoom});transform-origin:0 0;width:max-content">{svg}</div></div>""",
-            height=640, scrolling=True)
+            height=640)
         d = st.columns(4)
         d[0].download_button("⬇ draw.io (editable)", drawio_xml, file_name="future_state.drawio",
-                             mime="application/xml", use_container_width=True, key="p3_dl_drawio")
+                             mime="application/xml", width="stretch", key="p3_dl_drawio")
         d[1].download_button("⬇ SVG", svg, file_name="future_state.svg", mime="image/svg+xml",
-                             use_container_width=True, key="p3_dl_svg")
+                             width="stretch", key="p3_dl_svg")
         try:
             d[2].download_button("⬇ PNG", render_png(svg), file_name="future_state.png", mime="image/png",
-                                 use_container_width=True, key="p3_dl_png")
+                                 width="stretch", key="p3_dl_png")
         except Exception:  # noqa: BLE001 - cairosvg missing
             d[2].caption("PNG export needs `cairosvg`")
-        d[3].link_button("✏️ Open in draw.io", drawio_url(drawio_xml), use_container_width=True)
+        d[3].link_button("✏️ Open in draw.io", drawio_url(drawio_xml), width="stretch")
     e = st.columns(4)
     e[0].download_button("⬇ Step table (CSV)", step_table_csv(rows), file_name="step_table.csv", mime="text/csv",
-                         use_container_width=True, key="p3_dl_csv")
+                         width="stretch", key="p3_dl_csv")
     e[1].download_button("⬇ Step table (JSON)", json.dumps(rows, indent=2, ensure_ascii=False),
-                         file_name="step_table.json", mime="application/json", use_container_width=True,
+                         file_name="step_table.json", mime="application/json", width="stretch",
                          key="p3_dl_json")
     e[2].download_button("⬇ Summary (Markdown)", summary, file_name="summary.md", mime="text/markdown",
-                         use_container_width=True, key="p3_dl_summary")
+                         width="stretch", key="p3_dl_summary")
     e[3].download_button("⬇ Follow-ups (Markdown)", follow_ups_markdown(run, c.model, c.names),
-                         file_name="follow_ups.md", mime="text/markdown", use_container_width=True, key="p3_dl_fu")
+                         file_name="follow_ups.md", mime="text/markdown", width="stretch", key="p3_dl_fu")
     st.download_button("⬇ Full run (JSON)", c.clean(run.model_dump_json(indent=2)), file_name="framework_run.json",
                        mime="application/json", key="p3_dl_run")
     st.caption("⚙ Rules step · double border: Agent step · ✓ Human approval · plain: Human task. "
@@ -500,9 +491,19 @@ def _future_screen(c: _Ctx):
         st.markdown(summary)
 
 
+def _stale_warning(c: _Ctx, box):
+    run, ss = _ss().get("framework"), _ss()
+    h = run.artifacts.get("input_hash") if run is not None else None
+    if h and h != framework_hash(c.model, ss.parsed, c.s):
+        box.warning("The map or materials changed after this framework run. Run the framework again "
+                    "(Run tab) to score the current map.")
+
+
 def render_phase3(model: ProcessModel, names: list[str]):
     c = _Ctx(model, names)
+    box = st.empty()     # filled after the tabs, so a run started on the Run tab is checked too
     tabs = st.tabs(["▶ Run", "🚦 Gate & context", "🧮 Steps", "❓ Follow-ups", "🔮 Future state"])
     for tab, fn in zip(tabs, (_run_screen, _gate_screen, _steps_screen, _followups_screen, _future_screen)):
         with tab:
             safe(fn, c)
+    safe(_stale_warning, c, box)

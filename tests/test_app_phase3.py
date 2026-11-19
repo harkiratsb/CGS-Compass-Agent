@@ -40,13 +40,8 @@ def _phase3(at):
     return at
 
 
-DIAGRAM_ERR = "The future-state diagram couldn't be drawn"
-
-
 def _errors(at):
-    """Errors other than the diagram one: the fake AI keeps 31 steps, and the expanded future map
-    runs the swimlane router out of connector letters (a render limit, reported separately)."""
-    return [e.value for e in at.error if not e.value.startswith(DIAGRAM_ERR)]
+    return [e.value for e in at.error]
 
 
 def _run_button(at):
@@ -90,7 +85,7 @@ def test_phase3_flow_with_a_run(live):
     assert not at.exception and not _errors(at), _errors(at)
     assert at.session_state.framework.steps[sid].dials["stakes"].basis == "answered"
 
-    # future state renders, with "Show what changed"
+    # future state renders (the fake run's expanded map needs more than 24 lettered connectors)
     at.toggle(key="p3_show_removed").set_value(True).run()
     assert not at.exception and not _errors(at), _errors(at)
     assert any("Outcome and goal" in m.value for m in at.markdown)
@@ -135,3 +130,20 @@ def test_names_kept_out_of_phase3_screens(demo_model, acceptance_run):
     _phase3(at)
     shown = " ".join(m.value for m in at.markdown)
     assert "Outcome and goal" in shown and "Jordyn" not in shown
+
+
+def test_success_end_placeholder_and_stale_warning(demo_model, acceptance_run):
+    run = acceptance_run.model_copy(deep=True)
+    run.success_end = None
+    run.artifacts["input_hash"] = "not-this-map"
+    text = save_project([("saved.md", b"## 00:00:01\nhello")], {}, demo_model, None, None, True, run.model_dump())
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    at.sidebar.get("file_uploader")[0].set_value([("p.json", text.encode(), "application/json")]).run()
+    _phase3(at)
+    assert not at.error
+    sel = next(s for s in at.selectbox if s.label.startswith("Success end"))
+    assert sel.value is None                                   # placeholder, nothing applied
+    assert at.session_state.framework.success_end is None
+    assert sum("changed after this framework run" in w.value for w in at.warning) == 1
+    sel.set_value(sel.options[1]).run()
+    assert at.session_state.framework.success_end == sel.options[1].split(" · ")[0]

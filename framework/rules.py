@@ -316,8 +316,31 @@ def _step_answers(st: StepAssessment):
             yield fam, val
 
 
+_SCORING_FAMILIES = ("tier1", "dials", "agent_test", "readiness")
+
+
+def _r_yes(st: StepAssessment, k: str) -> bool:
+    return yes(st.r_pass2.get(k) or st.r_pass1.get(k))
+
+
+def _asks(st: StepAssessment, family: str) -> bool:
+    """Whether a step's assumed answers in `family` are worth a follow-up question.
+
+    r_move only matters when R4 fired, combine_with only when R3 or R6 did, and the
+    scoring families (tiers, dials, agent test, per-step readiness) only for a kept
+    step that no Agent step makes unnecessary."""
+    if family == "r_move":
+        return _r_yes(st, "R4")
+    if family == "combine_with":
+        return _r_yes(st, "R3") or _r_yes(st, "R6")
+    if family in _SCORING_FAMILIES:
+        return st.call == "Keep" and not st.made_unnecessary_by
+    return True
+
+
 def follow_ups(run: FrameworkRun, order: list[str] | None = None) -> list[FollowUp]:
-    """Every assumed answer: process level first, then steps in `order` (default: run order)."""
+    """Assumed answers that could matter: process level first, then steps in `order`
+    (default: run order), skipping answers that cannot change the step's result (see _asks)."""
     out: list[FollowUp] = []
 
     def add(path: str, a: Answer):
@@ -331,8 +354,10 @@ def follow_ups(run: FrameworkRun, order: list[str] | None = None) -> list[Follow
     ids = [i for i in (order or []) if i in run.steps]
     ids += [i for i in run.steps if i not in ids]
     for sid in ids:
-        for suffix, a in _step_answers(run.steps[sid]):
-            add(f"steps.{sid}.{suffix}", a)
+        st = run.steps[sid]
+        for suffix, a in _step_answers(st):
+            if _asks(st, suffix.split(".")[0]):
+                add(f"steps.{sid}.{suffix}", a)
     return out
 
 
@@ -432,7 +457,9 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
 
     run.posture = posture(run, facts)
     run.waves = waves(run)
-    run.follow_ups = follow_ups(run, facts.steps)
+    # steps on the main path first, then the rest (each in map order)
+    run.follow_ups = follow_ups(run, [i for i in facts.steps if i in facts.main_path]
+                                + [i for i in facts.steps if i not in facts.main_path])
     return run
 
 
@@ -508,7 +535,8 @@ def _put(container, key: str, is_attr: bool, answer: Answer | None) -> None:
 
 
 def answer_and_rescore(run: FrameworkRun, model: ProcessModel, path: str, value: Any,
-                       s: Settings, reason: str = "Answered in the app") -> FrameworkRun:
+                       s: Settings, reason: str = "Answered in the app",
+                       names: list[str] | None = None) -> FrameworkRun:
     """Record a person's answer (basis answered, confidence H), keep the old one in history,
     and re-run the rules. No AI call. The run passed in is never modified."""
     run = run.model_copy(deep=True)
@@ -523,10 +551,11 @@ def answer_and_rescore(run: FrameworkRun, model: ProcessModel, path: str, value:
         history = [*old.history, entry]
     _put(container, key, is_attr,
          Answer(value=value, basis="answered", reason=reason, confidence="H", history=history))
-    return apply_rules(run, model, s)
+    return apply_rules(run, model, s, names)
 
 
-def undo_answer(run: FrameworkRun, model: ProcessModel, path: str, s: Settings) -> FrameworkRun:
+def undo_answer(run: FrameworkRun, model: ProcessModel, path: str, s: Settings,
+                names: list[str] | None = None) -> FrameworkRun:
     """Put back the answer that was replaced last. ValueError if there is nothing to undo."""
     run = run.model_copy(deep=True)
     container, key, is_attr = _locate(run, path)
@@ -540,4 +569,4 @@ def undo_answer(run: FrameworkRun, model: ProcessModel, path: str, s: Settings) 
         fields = {f: entry[f] for f in _HISTORY_FIELDS if f in entry}
         restored = Answer(**fields, quotes=entry.get("quotes", []), history=rest)
         _put(container, key, is_attr, restored)
-    return apply_rules(run, model, s)
+    return apply_rules(run, model, s, names)

@@ -34,9 +34,10 @@ from ingest.merge import dedupe_activities  # noqa: E402
 from ingest.parse import parse_file  # noqa: E402
 from schema import AgentRun  # noqa: E402
 
-# keep in step with INTAKE_DEFAULTS in app.py (they are part of the map, so part of the replay hash)
-PROCESS_NAME = "CGS Lead & Opportunity Management"
-PROCESS_OWNER = "Director of Operations"
+from intake import INTAKE_DEFAULTS  # noqa: E402
+
+# the app's intake defaults (they are part of the map, so part of the replay hash)
+PROCESS_NAME, PROCESS_OWNER = INTAKE_DEFAULTS["process_name"], INTAKE_DEFAULTS["process_owner"]
 
 
 def demo_state():

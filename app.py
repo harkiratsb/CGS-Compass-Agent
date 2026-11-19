@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 # load .env if present (no dependency on python-dotenv)
 _env = Path(__file__).with_name(".env")
@@ -36,6 +35,7 @@ from cgs_tools import tags_for                        # noqa: E402
 from handoff import build_handoff, check_handoff, speaker_names, with_nicknames  # noqa: E402
 from framework.models import FrameworkRun                # noqa: E402
 from phase3_ui import render_phase3                      # noqa: E402
+from intake import INTAKE_DEFAULTS                       # noqa: E402
 
 ORANGE = "#FF6428"
 DEMO_DIR = Path(__file__).with_name("demo_data")
@@ -83,16 +83,6 @@ def _reset_review_state():
     ss.run, ss.framework, ss.map_reviewed = None, None, False
     ss["map_reviewed_toggle"] = False
 
-INTAKE_DEFAULTS = {
-    "process_name": "CGS Lead & Opportunity Management",
-    "process_owner": "Director of Operations",
-    "process_scope": "Lead identification through alignment on a discussion document. "
-                     "Proposal/SOW is a separate process.",
-    "account_id": "ACC-0001",
-    "process_id": "P-01",
-    "function_ref": "",
-    "extra_names": "",
-}
 for _k, _v in INTAKE_DEFAULTS.items():
     ss.setdefault(_k, _v)
 DEFINITION_STATUSES = ["draft", "reviewed", "approved"]
@@ -141,7 +131,7 @@ with st.sidebar:
         if drive.available():
             folder_id = st.text_input("Drive folder ID", value=os.environ.get("DRIVE_FOLDER_ID", ""),
                                       help="The part of the folder URL after /folders/. Share the folder with the service-account email first.")
-            if st.button("Browse folder", use_container_width=True, disabled=not folder_id):
+            if st.button("Browse folder", width="stretch", disabled=not folder_id):
                 try:
                     ss.drive_files = drive.list_folder(folder_id)
                     if not ss.drive_files:
@@ -151,7 +141,7 @@ with st.sidebar:
             if ss.get("drive_files"):
                 chosen = st.multiselect("Select materials", options=[f["name"] for f in ss.drive_files],
                                         default=[f["name"] for f in ss.drive_files])
-                if st.button("Import selected from Drive", use_container_width=True, disabled=not chosen):
+                if st.button("Import selected from Drive", width="stretch", disabled=not chosen):
                     picked = [f for f in ss.drive_files if f["name"] in chosen]
                     with st.spinner("Pulling files from Drive…"):
                         ss.files = [drive.fetch(f) for f in picked]
@@ -166,11 +156,11 @@ with st.sidebar:
                                    type=["md", "txt", "vtt", "srt", "docx", "pdf"],
                                    accept_multiple_files=True)
     c1, c2 = st.columns(2)
-    if c1.button("Load demo materials", use_container_width=True):
+    if c1.button("Load demo materials", width="stretch"):
         ss.files = [(p.name, p.read_bytes()) for p in sorted(DEMO_DIR.glob("*.md"))]
         ss.model, ss.parsed, ss.mode = None, [], None
         _reset_review_state()
-    if c2.button("Clear", use_container_width=True):
+    if c2.button("Clear", width="stretch"):
         ss.files, ss.parsed, ss.model, ss.mode = [], [], None, None
         _reset_review_state()
     # only take the uploader's files when its contents change, so an opened project isn't overwritten
@@ -186,7 +176,7 @@ with st.sidebar:
     key_present = bool(os.environ.get("ANTHROPIC_API_KEY"))
     st.caption(("🟢 Live extraction available" if key_present else "🟡 No API key — cached extraction only"))
     force_live = st.checkbox("Run agent live (ignore cache / replay)", value=False, disabled=not key_present)
-    run = st.button("▶ Analyze process", type="primary", use_container_width=True, disabled=not ss.files)
+    run = st.button("▶ Analyze process", type="primary", width="stretch", disabled=not ss.files)
 
 # ---------------------------------------------------------------- pipeline
 STEP_ICON = {"code": "⚙️", "llm": "🤖"}
@@ -285,7 +275,7 @@ with tab_agent:
         top1, top2 = st.columns([3, 1])
         top1.markdown("##### Agent trace")
         top2.download_button("⬇ Download full run (JSON)", ar.model_dump_json(indent=2), file_name="agent_run.json",
-                             mime="application/json", use_container_width=True)
+                             mime="application/json", width="stretch")
         st.caption("Extractor, comparer, reconciler and reviser share one model; the **verifier runs on a different model**, "
                    "builds its checklist from the transcripts before seeing any map, and never edits the map itself.")
         for stp in ar.steps:
@@ -311,7 +301,7 @@ with tab_agent:
             with st.expander("Compare per-source swimlanes"):
                 for name, pm in ar.per_source.items():
                     st.markdown(f"**{short(name)}**")
-                    components.html(mini_svg(pm, f"From {short(name)} only"), height=330, scrolling=True)
+                    st.iframe(mini_svg(pm, f"From {short(name)} only"), height=330)
 
         # ---- 2. discrepancies
         if ar.alignment or ar.discrepancies:
@@ -330,7 +320,7 @@ with tab_agent:
                 st.caption(f"Coverage matrix: {len(cov_df)} steps lined up across sources; "
                            f"**{int(gaps.sum())} appear in only some sources** (highlighted).")
                 styled = cov_df.style.apply(lambda r: ["background-color:#FFF4E5" if gaps[r.name] else "" for _ in r], axis=1)
-                st.dataframe(styled, hide_index=True, use_container_width=True, height=min(420, 38 + 35 * len(cov_df)))
+                st.dataframe(styled, hide_index=True, width="stretch", height=min(420, 38 + 35 * len(cov_df)))
             if ar.discrepancies:
                 sevs = {s: sum(d.severity == s for d in ar.discrepancies) for s in ("high", "medium", "low")}
                 st.caption(" · ".join(f"{SEV_BADGE[k]} {v}" for k, v in sevs.items() if v))
@@ -381,7 +371,7 @@ with tab_agent:
                 with st.expander(f"Verifier's blind checklist ({len(ar.checklist)} items)"):
                     st.dataframe(pd.DataFrame([{"id": c.id, "kind": c.kind, "item": c.description, "role": c.role,
                                                 "flagged": "⚑" if c.id in flagged else ""} for c in ar.checklist]),
-                                 hide_index=True, use_container_width=True)
+                                 hide_index=True, width="stretch")
             for rnd in sorted({f.round for f in ar.findings}):
                 st.markdown(f"**Round {rnd}**")
                 for f in [x for x in ar.findings if x.round == rnd]:
@@ -395,7 +385,7 @@ with tab_agent:
                             st.caption(f"{refs}{sr.file} @ {sr.location} — {sr.quote}")
             if ar.draft is not None:
                 with st.expander("Before vs after verification"):
-                    components.html(mini_svg(ar.draft, "Draft — before verification"), height=330, scrolling=True)
+                    st.iframe(mini_svg(ar.draft, "Draft — before verification"), height=330)
                     st.markdown("**Final:** see the Swimlane tab.")
 
 # ---------------------------------------------------------------- sources
@@ -415,7 +405,7 @@ with tab_model:
 
     st.markdown("##### Roles (swimlanes)")
     roles_df = pd.DataFrame([{"id": r.id, "name": r.name, "description": r.description, "external": r.is_external} for r in model.roles])
-    roles_edit = st.data_editor(roles_df, hide_index=True, use_container_width=True, key="roles_editor",
+    roles_edit = st.data_editor(roles_df, hide_index=True, width="stretch", key="roles_editor",
                                 column_config={"id": st.column_config.TextColumn(disabled=True)})
 
     st.markdown("##### Activities & decisions")
@@ -431,7 +421,7 @@ with tab_model:
                      "sources": cov.get(d.id, 0), "description": " / ".join(f"{b.label}→{b.next_id}" for b in d.branches)})
     df = pd.DataFrame(rows).sort_values(["order", "id"])
     edited = st.data_editor(
-        df, hide_index=True, use_container_width=True, height=520, key="nodes_editor",
+        df, hide_index=True, width="stretch", height=520, key="nodes_editor",
         column_config={
             "id": st.column_config.TextColumn(disabled=True, width="small"),
             "type": st.column_config.TextColumn(disabled=True, width="small"),
@@ -461,7 +451,7 @@ with tab_model:
                       "judgment reason stated": {True: "yes", False: "no"}.get(n.judgment_reason_stated, "")})
     basis_opts = ["stated", "estimated"]
     sized = st.data_editor(
-        pd.DataFrame(srows), hide_index=True, use_container_width=True, key="sizing_editor",
+        pd.DataFrame(srows), hide_index=True, width="stretch", key="sizing_editor",
         column_config={
             "id": st.column_config.TextColumn(disabled=True, width="small"),
             "step": st.column_config.TextColumn(disabled=True),
@@ -517,9 +507,9 @@ with tab_model:
     with st.expander("Handoffs & dependencies"):
         st.dataframe(pd.DataFrame([{"from": role_names.get(h.from_role_id), "to": role_names.get(h.to_role_id),
                                     "at": h.at_node_id, "description": h.description} for h in model.handoffs]),
-                     hide_index=True, use_container_width=True)
+                     hide_index=True, width="stretch")
         st.dataframe(pd.DataFrame([{"node": d.node_id, "depends on": d.depends_on, "type": d.type} for d in model.dependencies]),
-                     hide_index=True, use_container_width=True)
+                     hide_index=True, width="stretch")
 
     with st.expander("Evidence — source references per step"):
         for a in model.activities:
@@ -542,23 +532,23 @@ with tab_swim:
     zoom = c2.slider("Zoom", 0.4, 1.6, 0.8, 0.05)
     geo = build_geometry(model, show_stickies=stickies, show_tools=tools_on)
     svg = render_svg(model, cov, overlay=overlay, geometry=geo)
-    components.html(
+    st.iframe(
         f"""<div style="overflow:auto;border:1px solid #E5E7EB;border-radius:8px;background:#fff;padding:8px">
               <div style="transform:scale({zoom});transform-origin:0 0;width:max-content">{svg}</div></div>""",
-        height=640, scrolling=True)
+        height=640)
     drawio_xml = render_drawio(model, geo)
     d1, d2, d4, d3 = st.columns(4)
-    d1.download_button("⬇ Download SVG", svg, file_name="current_state_swimlane.svg", mime="image/svg+xml", use_container_width=True)
+    d1.download_button("⬇ Download SVG", svg, file_name="current_state_swimlane.svg", mime="image/svg+xml", width="stretch")
     try:
-        d2.download_button("⬇ Download PNG", render_png(svg), file_name="current_state_swimlane.png", mime="image/png", use_container_width=True)
+        d2.download_button("⬇ Download PNG", render_png(svg), file_name="current_state_swimlane.png", mime="image/png", width="stretch")
     except Exception:  # cairosvg missing
         d2.caption("PNG export needs `cairosvg`")
     d4.download_button("⬇ Download draw.io (editable)", drawio_xml, file_name="current_state_swimlane.drawio",
-                       mime="application/xml", use_container_width=True,
+                       mime="application/xml", width="stretch",
                        help="Opens in draw.io, or in Lucidchart via File → Import → draw.io. Shapes, lanes and "
                             "connectors stay editable.")
     d3.download_button("⬇ Download model JSON", model.model_dump_json(indent=2), file_name="process_model.json",
-                       mime="application/json", use_container_width=True)
+                       mime="application/json", width="stretch")
     s1, s2 = st.columns([1, 2])
     ss.map_reviewed = s2.toggle("Mark map as reviewed", key="map_reviewed_toggle",
                                 help="Records that someone has checked this map against the source material.")
@@ -567,12 +557,12 @@ with tab_swim:
     s1.download_button("💾 Save project", save_project(
         ss.files, intake_now, model, ss.run, ss.mode, ss.map_reviewed,
         fw.model_dump() if hasattr(fw, "model_dump") else fw),
-        file_name="cgs_project.json", mime="application/json", use_container_width=True,
+        file_name="cgs_project.json", mime="application/json", width="stretch",
         help="Saves the materials, the map, the agent run and your answers so you can pick up later.")
     # ---- edit in draw.io, then bring the edits back
     st.markdown("##### Edit in draw.io")
     e1, e2 = st.columns([1, 2])
-    e1.link_button("✏️ Open in draw.io", drawio_url(drawio_xml), use_container_width=True,
+    e1.link_button("✏️ Open in draw.io", drawio_url(drawio_xml), width="stretch",
                    help="Opens this diagram in draw.io in your browser. No account needed; the diagram travels in the "
                         "link itself and is not uploaded anywhere by the app.")
     e2.caption("1. **Open in draw.io** and edit: drag steps (or into another lane), rename, add or remove steps and "
@@ -616,7 +606,7 @@ with tab_pain:
     st.markdown("##### Frequency (for the handoff)")
     fdf = pd.DataFrame([{"id": p.id, "pain point": p.description[:90], "frequency": p.frequency or "",
                          "basis": p.frequency_basis} for p in model.pain_points])
-    fed = st.data_editor(fdf, hide_index=True, use_container_width=True, key="freq_editor",
+    fed = st.data_editor(fdf, hide_index=True, width="stretch", key="freq_editor",
                          column_config={"id": st.column_config.TextColumn(disabled=True, width="small"),
                                         "pain point": st.column_config.TextColumn(disabled=True),
                                         "frequency": st.column_config.SelectboxColumn(

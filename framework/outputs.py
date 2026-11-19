@@ -165,13 +165,18 @@ def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | 
     return _clean("\n".join(out).rstrip() + "\n", names)
 
 
-def follow_ups_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None) -> str:
+def follow_up_groups(run: FrameworkRun, model: ProcessModel, dedupe: bool = True) -> list[tuple[str, str, list]]:
+    """Follow-ups grouped for sending: [(section, group title, [FollowUp])].
+
+    Sections, in order: "Start here" (process facts and documentation checks), "Steps on the
+    main path", "Other steps"; each step's questions sit under its name. With `dedupe`, questions
+    repeated word for word (two steps with the same name) are listed once, as in the Markdown."""
     facts = graph_facts(model, run.success_end)
-    out = ["# Follow-up questions\n"]
     seen: set[str] = set()
-    process, by_step = [], {}
+    process: list = []
+    by_step: dict[str, list] = {}
     for f in run.follow_ups:
-        if f.question in seen:
+        if dedupe and f.question in seen:
             continue
         seen.add(f.question)
         parts = f.path.split(".")
@@ -179,14 +184,30 @@ def follow_ups_markdown(run: FrameworkRun, model: ProcessModel, names: list[str]
             by_step.setdefault(parts[1], []).append(f)
         else:
             process.append(f)
+    order = ([s for s in facts.steps if s in by_step and s in facts.main_path]
+             + [s for s in facts.steps if s in by_step and s not in facts.main_path]
+             + [s for s in by_step if s not in facts.steps])
+    groups = [("Start here", "Process facts and documentation", process)] if process else []
+    for sid in order:
+        section = "Steps on the main path" if sid in facts.main_path else "Other steps"
+        groups.append((section, f"{sid}: {_step_label(model, sid)}", by_step[sid]))
+    return groups
+
+
+def follow_ups_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None) -> str:
+    out = ["# Follow-up questions\n"]
 
     def line(f):
         return f"- {f.question} (current: {f.current if f.current is not None else 'none'}; answer goes in `{f.path}`)"
 
-    out.append("## Process\n")
-    out.extend(map(line, process) or ["None"])
-    order = [s for s in facts.steps if s in by_step] + [s for s in by_step if s not in facts.steps]
-    for sid in order:
-        out.append(f"\n## {sid}: {_step_label(model, sid)}\n")
-        out.extend(map(line, by_step[sid]))
+    groups = follow_up_groups(run, model)
+    if not groups:
+        out.append("None: every input has evidence or an answer.")
+    last = None
+    for section, title, items in groups:
+        if section != last:
+            out.append(f"\n## {section}\n")
+            last = section
+        out.append(f"\n### {title}\n")
+        out.extend(map(line, items))
     return _clean("\n".join(out) + "\n", names)

@@ -200,8 +200,9 @@ def test_follow_ups_list_every_assumed(demo_model, all_assumed_run, settings):
     assert all(get_answer(out, f.path).basis == "assumed" for f in out.follow_ups)
     assert all(f.question for f in out.follow_ups)
     step_ids = [f.path.split(".")[1] for f in out.follow_ups if f.path.startswith("steps.")]
-    order = graph_facts(demo_model).steps
-    assert step_ids == sorted(step_ids, key=order.index)
+    facts = graph_facts(demo_model)
+    order = [s for s in facts.steps if s in facts.main_path] + [s for s in facts.steps if s not in facts.main_path]
+    assert step_ids == sorted(step_ids, key=order.index)    # main path first, map order within each
 
 
 def _capped_run(demo_model, all_assumed_run, settings):
