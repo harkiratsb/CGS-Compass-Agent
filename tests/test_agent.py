@@ -298,7 +298,7 @@ def test_first_actions_must_be_a_list(monkeypatch, demo_model, settings):
     assert run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings).first_actions == []
 
 
-def test_framework_hash_covers_names_locations_and_settings(demo_model, settings):
+def test_framework_hash_covers_names_locations_and_loop_passes(demo_model, settings):
     from framework.agent import framework_hash
 
     def pf(name, loc, text="t"):
@@ -308,5 +308,7 @@ def test_framework_hash_covers_names_locations_and_settings(demo_model, settings
     assert base != framework_hash(demo_model, pf("a.md", "2"), settings)
     assert framework_hash(demo_model, pf("a", "b"), settings) != framework_hash(demo_model, pf("ab", ""), settings)
     changed = settings.model_copy(deep=True)
-    changed.defaults.dial = 2
+    changed.defaults.dial = 2                       # thresholds and defaults are applied on load, not hashed
+    assert base == framework_hash(demo_model, pf("a.md", "1"), changed)
+    changed.loop.extra_passes = 3
     assert base != framework_hash(demo_model, pf("a.md", "1"), changed)

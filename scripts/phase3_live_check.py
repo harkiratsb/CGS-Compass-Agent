@@ -27,27 +27,9 @@ if _env.exists():
             os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 from framework.agent import DEMO_RUN, run_framework  # noqa: E402
+from framework.demo import demo_state  # noqa: E402
 from framework.models import FrameworkRun, StepAssessment  # noqa: E402
 from handoff import speaker_names  # noqa: E402
-from ingest.agent import DEMO_RUN as STAGE1_REPLAY  # noqa: E402
-from ingest.merge import dedupe_activities  # noqa: E402
-from ingest.parse import parse_file  # noqa: E402
-from schema import AgentRun  # noqa: E402
-
-from intake import INTAKE_DEFAULTS  # noqa: E402
-
-# the app's intake defaults (they are part of the map, so part of the replay hash)
-PROCESS_NAME, PROCESS_OWNER = INTAKE_DEFAULTS["process_name"], INTAKE_DEFAULTS["process_owner"]
-
-
-def demo_state():
-    files = [(p.name, p.read_bytes()) for p in sorted((ROOT / "demo_data").glob("*.md"))]
-    parsed = [parse_file(n, b) for n, b in files]
-    # the shipped Stage 1 replay (what a fresh copy of the app uses), not a local cache, so the replay travels
-    agent_run = AgentRun.model_validate_json(STAGE1_REPLAY.read_text())
-    model = dedupe_activities(agent_run.final)
-    model.process.name, model.process.owner = PROCESS_NAME, PROCESS_OWNER
-    return files, parsed, agent_run, model
 
 
 def _fmt(answers) -> str:

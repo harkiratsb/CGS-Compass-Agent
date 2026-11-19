@@ -595,14 +595,16 @@ def _summary_step(run, c, s):
 
 
 def framework_hash(model: ProcessModel, parsed: list[ParsedFile], s: Settings | None = None) -> str:
-    """Map + source chunks (file, location, text) + the settings in force."""
+    """Map + source chunks (file, location, text) + the number of loop passes (it changes which AI
+    steps run). Thresholds and defaults are left out: apply_rules applies the current settings to a
+    cached or replayed run, so editing settings.toml keeps the cache and the demo replay usable."""
     h = hashlib.sha256(model.model_dump_json().encode())
     for pf in parsed:
         for ch in pf.chunks:
             for part in (pf.name, ch.location, ch.text):
                 h.update(part.encode() + b"\0")
             h.update(b"\1")
-    h.update(b"\2" + (s or load_settings()).model_dump_json().encode())
+    h.update(b"\2loop.extra_passes=%d" % (s or load_settings()).loop.extra_passes)
     return h.hexdigest()[:16]
 
 
