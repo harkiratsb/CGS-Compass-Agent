@@ -85,3 +85,13 @@ def test_removed_row_is_wave_zero_and_empty_reason_is_gap(demo_model, acceptance
     acceptance_run.steps["A3"].r_pass2.clear()
     row = next(r for r in step_table(acceptance_run, demo_model) if r["step_id"] == "A3")
     assert row["reason"] == "Gap: no reason recorded"
+
+
+def test_summary_says_when_the_map_was_not_reviewed(demo_model, acceptance_run):
+    line = "The map was not marked as reviewed before this run."
+    acceptance_run.map_reviewed = False
+    md = summary_markdown(acceptance_run, demo_model)
+    sect = md.split("## Documentation confidence")[1].split("## ")[0]
+    assert line in sect
+    acceptance_run.map_reviewed = True
+    assert line not in summary_markdown(acceptance_run, demo_model)

@@ -499,8 +499,19 @@ def _stale_warning(c: _Ctx, box):
                     "(Run tab) to score the current map.")
 
 
+def _sync_map_reviewed():
+    """The run records the session's "Mark map as reviewed" toggle (code only, no AI, no rescore)."""
+    ss = _ss()
+    run = ss.get("framework")
+    if run is not None and run.map_reviewed != bool(ss.get("map_reviewed")):
+        run = run.model_copy()
+        run.map_reviewed = bool(ss.get("map_reviewed"))
+        ss.framework = run
+
+
 def render_phase3(model: ProcessModel, names: list[str]):
     c = _Ctx(model, names)
+    _sync_map_reviewed()
     box = st.empty()     # filled after the tabs, so a run started on the Run tab is checked too
     tabs = st.tabs(["▶ Run", "🚦 Gate & context", "🧮 Steps", "❓ Follow-ups", "🔮 Future state"])
     for tab, fn in zip(tabs, (_run_screen, _gate_screen, _steps_screen, _followups_screen, _future_screen)):

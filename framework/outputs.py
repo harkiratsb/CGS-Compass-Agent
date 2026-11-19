@@ -131,11 +131,12 @@ def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | 
         f"- Baselines: {_val(ctx.get('baselines'), 'baseline values')}",
         f"- Volume: {_val(ctx.get('volume'), 'how often the process runs')}",
     ])
-    if run.doc_gate:
-        section("Documentation confidence",
-                [f"{run.gate_band} (score {run.gate_score:g} of {len(run.doc_gate)} checks)"])
-    else:
-        section("Documentation confidence", ["Gap: documentation checks not run"])
+    doc = ([f"{run.gate_band} (score {run.gate_score:g} of {len(run.doc_gate)} checks)"] if run.doc_gate
+           else ["Gap: documentation checks not run"])
+    if not run.map_reviewed:
+        doc.append("")
+        doc.append("The map was not marked as reviewed before this run.")
+    section("Documentation confidence", doc)
     section("Open map questions",
             [f"- {mc.question} (steps {', '.join(mc.step_ids)})" for mc in run.map_checks]
             or ["None found"])

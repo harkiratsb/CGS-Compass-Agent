@@ -147,3 +147,14 @@ def test_success_end_placeholder_and_stale_warning(demo_model, acceptance_run):
     assert sum("changed after this framework run" in w.value for w in at.warning) == 1
     sel.set_value(sel.options[1]).run()
     assert at.session_state.framework.success_end == sel.options[1].split(" · ")[0]
+
+
+def test_phase3_syncs_map_reviewed_from_the_toggle(demo_model, acceptance_run):
+    run = acceptance_run.model_copy(deep=True)
+    run.map_reviewed = True
+    text = save_project([("saved.md", b"## 00:00:01\nhello")], {}, demo_model, None, None, False, run.model_dump())
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    at.sidebar.get("file_uploader")[0].set_value([("p.json", text.encode(), "application/json")]).run()
+    _phase3(at)
+    assert at.session_state.framework.map_reviewed is False
+    assert any("not marked as reviewed before this run" in m.value for m in at.markdown)
