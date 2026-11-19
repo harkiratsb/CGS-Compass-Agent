@@ -10,7 +10,8 @@ import io
 
 from framework.graph import graph_facts
 from framework.models import R_KEYS, Answer, FrameworkRun, StepAssessment
-from framework.rules import _step_answers, _tier_label, r_answer
+from framework.models import READINESS_KEYS
+from framework.rules import _score, _step_answers, _tier_label, r_answer, summary_is_stale
 from handoff import _scrub, with_nicknames
 from schema import ProcessModel
 
@@ -114,8 +115,23 @@ def _val(a: Answer | None, what: str) -> str:
     return str(a.value) + ("" if a.basis != "assumed" else " (assumed)")
 
 
-def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None) -> str:
+STALE_AI_TEXT = "Written by the AI at run time; may not reflect later answers."
+_READINESS_LABEL = {"data_systems": "Data and systems", "process_clarity": "Process clarity",
+                    "bus_factor": "Bus factor", "governance": "Governance", "people": "People"}
+
+
+def skipped_at_low_gate(run: FrameworkRun) -> bool:
+    """AI scoring steps were skipped at the Low gate, and the gate is no longer Low."""
+    return run.gate_band != "Low" and any(
+        t.kind == "code" and t.summary.startswith("Skipped: documentation confidence is Low") for t in run.trace)
+
+
+def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None, s=None) -> str:
+    from framework.settings import load_settings
+
+    s = s or load_settings()
     rows = step_table(run, model)
+    stale = summary_is_stale(run)
     out: list[str] = []
 
     def section(title: str, lines: list[str]):
@@ -148,24 +164,34 @@ def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | 
         tiers.setdefault(key, []).append(r["step_id"])
     section("Steps by tier", [f"- {k}: {len(v)} ({', '.join(v)})" for k, v in tiers.items()])
 
-    ready: dict[object, list[str]] = {}
-    for r in rows:
-        if r["readiness"] != "":
-            ready.setdefault(r["readiness"], []).append(r["step_id"])
-    section("Readiness by test", [f"- Weakest test scores {k}: {len(v)} steps ({', '.join(v)})"
-                                  for k, v in sorted(ready.items())]
-            or ["Gap: readiness not scored"])
+    floor = s.readiness.ready_min
+    ready_lines = []
+    for k in READINESS_KEYS:
+        a = run.readiness_defaults.get(k)
+        v = _score(a)
+        shown = (f"{v}" + (" (assumed)" if a is not None and a.basis == "assumed" else "")) if v is not None \
+            else f"Gap: no score (framework default {s.defaults.readiness})"
+        low = [sid for sid, st in run.steps.items()
+               if (x := _score(st.readiness.get(k))) is not None and x < floor]
+        n = len(low)
+        over = f"{n} step override{'s' if n != 1 else ''} below {floor}" + (f" ({', '.join(low)})" if low else "")
+        ready_lines.append(f"- {_READINESS_LABEL[k]}: process default {shown}; {over}")
+    section("Readiness by test", ready_lines)
     section("Posture", [f"- {p}" for p in run.posture] or ["Gap: posture not set"])
     section("Waves", [f"- Wave {w}: {', '.join(ids)}" for w, ids in sorted(run.waves.items()) if ids]
             or ["Gap: no waves set"])
-    section("First three actions", [f"{i}. {a}" for i, a in enumerate(run.first_actions[:3], 1)]
-            or ["Gap: first actions not written"])
+    actions = [f"{i}. {a}" for i, a in enumerate(run.first_actions[:3], 1)]
+    if actions and stale:
+        actions.insert(0, f"_{STALE_AI_TEXT}_\n")
+    section("First three actions", actions or ["Gap: first actions not written"])
     gaps = sum(r["gaps"] for r in rows)
     gap_lines = [f"- {gaps} inputs are assumed, not evidenced ({len(run.follow_ups)} follow-up questions)"]
     if not run.summary_text:
         gap_lines.append("- Gap: written summary missing")
     section("Gaps", gap_lines)
     if run.summary_text:
+        if stale:
+            out.append(f"_{STALE_AI_TEXT}_\n")
         out.append(run.summary_text + "\n")
     return _clean("\n".join(out).rstrip() + "\n", names)
 

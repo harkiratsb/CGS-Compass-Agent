@@ -592,6 +592,20 @@ def answered_answers(run: FrameworkRun) -> dict[str, Answer]:
     return out
 
 
+def answers_key(run: FrameworkRun) -> str:
+    """A key for the answers given in the app (answered, with history); "" when there are none."""
+    given = sorted((p, repr(a.value)) for p, a in answered_answers(run).items() if a.history)
+    if not given:
+        return ""
+    import hashlib
+    return hashlib.sha256(repr(given).encode()).hexdigest()[:16]
+
+
+def summary_is_stale(run: FrameworkRun) -> bool:
+    """True when answers were given after the AI wrote summary_text / first_actions."""
+    return bool(run.summary_text or run.first_actions) and answers_key(run) != run.summary_answers_key
+
+
 def carry_answers(run: FrameworkRun, answers: dict[str, Answer]) -> None:
     """Put a person's answers onto `run` (in place), history included. Paths that don't exist
     on this run (a step no longer on the map) are skipped."""

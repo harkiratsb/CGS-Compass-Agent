@@ -16,11 +16,11 @@ from framework.agent import framework_hash, run_framework
 from framework.future import build_future_model
 from framework.models import Answer, FrameworkRun, allowed_values
 from framework.followups import ensure_top_questions
-from framework.outputs import (follow_ups_markdown, step_table, step_table_csv, summary_markdown,
-                               top_questions_heading)
+from framework.outputs import (follow_ups_markdown, skipped_at_low_gate, step_table, step_table_csv,
+                               summary_markdown, top_questions_heading)
 from framework.rules import _step_answers, _tier_label, answer_and_rescore, apply_rules, undo_answer
 from framework.settings import load_settings
-from handoff import _scrub
+from handoff import _scrub, with_nicknames
 from render.drawio import drawio_url, render_drawio
 from render.swimlane import build_geometry, render_png, render_svg
 from schema import ProcessModel
@@ -56,8 +56,9 @@ def safe(fn, *args):
 
 
 class _Ctx:
-    def __init__(self, model: ProcessModel, names: list[str]):
-        self.model, self.names = model, names
+    def __init__(self, model: ProcessModel, names: list[str], save=None):
+        self.save = save          # () -> project JSON, for Save project on the Future state screen
+        self.model, self.names = model, with_nicknames(list(names)) if names else []
         self.s = load_settings()
 
     def clean(self, text) -> str:
@@ -183,6 +184,7 @@ def _run_screen(c: _Ctx):
         return
     if run.mode == "replay":
         st.info("**Replay** of a pre-computed framework run for the demo map (no live API call).")
+    _low_gate_note(run)
     m = st.columns(5)
     m[0].metric("Mode", run.mode)
     m[1].metric("Documentation", run.gate_band, f"score {run.gate_score:g}", delta_color="off")
@@ -201,9 +203,18 @@ def _run_screen(c: _Ctx):
             st.markdown(f"{icon} **{stp.id} · {stp.name}** <span class='mode'>{meta}</span><br>"
                         f"<span style='color:#4B5563'>{c.clean(stp.summary)}</span>", unsafe_allow_html=True)
             if stp.artifact and stp.artifact in run.artifacts:
-                st.json(run.artifacts[stp.artifact], expanded=False)
+                text = c.clean(json.dumps(run.artifacts[stp.artifact], ensure_ascii=False, default=str))
+                try:
+                    st.json(json.loads(text), expanded=False)
+                except ValueError:
+                    st.code(text, language="json")
     st.download_button("⬇ Download full run (JSON)", c.clean(run.model_dump_json(indent=2)),
                        file_name="framework_run.json", mime="application/json", key="p3_dl_run_top")
+
+
+def _low_gate_note(run: FrameworkRun):
+    if skipped_at_low_gate(run):
+        st.info("AI steps were skipped at the Low gate — re-run AI steps to score steps from the materials.")
 
 
 def _need_run(ss) -> FrameworkRun | None:
@@ -314,6 +325,7 @@ def _steps_screen(c: _Ctx):
     run = _need_run(ss)
     if run is None:
         return
+    _low_gate_note(run)
     rows = step_table(run, c.model, c.names)
     if not rows:
         st.info("No steps to show.")
@@ -452,10 +464,11 @@ def _future_screen(c: _Ctx):
         return
     t1, t2 = st.columns([2, 3])
     show_removed = t1.toggle("Show what changed", key="p3_show_removed",
-                             help="Keep removed steps on the diagram, drawn dashed in red")
+                             help="Keep removed and combined steps on the diagram, drawn dashed in grey "
+                                  "(a combined step says which step it merges into)")
     zoom = t2.slider("Zoom", 0.4, 1.6, 0.8, 0.05, key="p3_zoom")
     rows = step_table(run, c.model, c.names)
-    summary = summary_markdown(run, c.model, c.names)
+    summary = summary_markdown(run, c.model, c.names, c.s)
     fm, markers = build_future_model(c.model, run, show_removed=show_removed, names=c.names)
     title = f"{c.model.process.name} — future state"
     try:   # a diagram failure keeps the table, summary and the other exports
@@ -491,10 +504,15 @@ def _future_screen(c: _Ctx):
                          width="stretch", key="p3_dl_summary")
     e[3].download_button("⬇ Follow-ups (Markdown)", follow_ups_markdown(run, c.model, c.names, c.s),
                          file_name="follow_ups.md", mime="text/markdown", width="stretch", key="p3_dl_fu")
-    st.download_button("⬇ Full run (JSON)", c.clean(run.model_dump_json(indent=2)), file_name="framework_run.json",
-                       mime="application/json", key="p3_dl_run")
+    f1, f2 = st.columns(2)
+    f1.download_button("⬇ Full run (JSON)", c.clean(run.model_dump_json(indent=2)), file_name="framework_run.json",
+                       mime="application/json", key="p3_dl_run", width="stretch")
+    if c.save is not None:
+        f2.download_button("💾 Save project", c.save(), file_name="cgs_project.json", mime="application/json",
+                           key="p3_save_project", width="stretch",
+                           help="Saves the materials, the map, the agent run and your answers so you can pick up later.")
     st.caption("⚙ Rules step · double border: Agent step · ✓ Human approval · plain: Human task. "
-               "Removed steps appear dashed in red with **Show what changed**.")
+               "Removed and combined steps appear dashed in grey with **Show what changed**.")
     st.divider()
     with st.container(border=True):
         st.markdown(summary)
@@ -518,8 +536,9 @@ def _sync_map_reviewed():
         ss.framework = run
 
 
-def render_phase3(model: ProcessModel, names: list[str]):
-    c = _Ctx(model, names)
+def render_phase3(model: ProcessModel, names: list[str], save=None):
+    """`save`: a callable returning the project file (JSON) for the Save project button."""
+    c = _Ctx(model, names, save)
     _sync_map_reviewed()
     box = st.empty()     # filled after the tabs, so a run started on the Run tab is checked too
     tabs = st.tabs(["▶ Run", "🚦 Gate & context", "🧮 Steps", "❓ Follow-ups", "🔮 Future state"])

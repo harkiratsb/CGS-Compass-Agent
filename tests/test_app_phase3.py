@@ -169,3 +169,14 @@ def test_phase3_syncs_map_reviewed_from_the_toggle(demo_model, acceptance_run):
     _phase3(at)
     assert at.session_state.framework.map_reviewed is False
     assert any("not marked as reviewed before this run" in m.value for m in at.markdown)
+
+
+def test_save_project_on_the_future_state_screen(demo_model, acceptance_run):
+    text = save_project([("saved.md", b"## 00:00:01\nhello")], {}, demo_model, None, None, True,
+                        acceptance_run.model_dump())
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    at.sidebar.get("file_uploader")[0].set_value([("p.json", text.encode(), "application/json")]).run()
+    _phase3(at)
+    assert not at.exception and not at.error
+    btn = next(b for b in at.get("download_button") if b.proto.label == "💾 Save project")
+    assert btn is not None

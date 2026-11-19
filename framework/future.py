@@ -30,6 +30,7 @@ def build_future_model(model: ProcessModel, run: FrameworkRun, show_removed: boo
     markers: dict[str, str] = {}
     chains: dict[str, list] = {}
     combined: dict[str, str] = {}         # dropped node -> combine target (for merging)
+    merged_into: dict[str, str] = {}      # shown greyed with "Show what changed": node -> combine target
 
     def next_of(nid: str) -> str | None:
         if nid in decs:
@@ -53,6 +54,9 @@ def build_future_model(model: ProcessModel, run: FrameworkRun, show_removed: boo
                 markers[nid] = "removed"
             else:
                 dropped[nid] = next_of(nid)
+        elif c == "Combine" and show_removed:
+            markers[nid] = "removed"
+            merged_into[nid] = st.combine_target
         elif c == "Combine":
             dropped[nid] = st.combine_target
             combined[nid] = st.combine_target
@@ -83,7 +87,10 @@ def build_future_model(model: ProcessModel, run: FrameworkRun, show_removed: boo
         if a.id in dropped:
             continue
         if a.id not in chains:
-            new_acts.append(a.model_copy(deep=True))
+            n = a.model_copy(deep=True)
+            if a.id in merged_into:
+                n.name = f"{n.name} (→ merged into {merged_into[a.id]})"
+            new_acts.append(n)
             continue
         for i, cs in enumerate(chains[a.id], 1):
             auto = cs.type in ("Rules", "Agent")
@@ -98,6 +105,8 @@ def build_future_model(model: ProcessModel, run: FrameworkRun, show_removed: boo
 
     new_decs = [d.model_copy(deep=True) for d in model.decisions if d.id not in dropped]
     for d in new_decs:
+        if d.id in merged_into:
+            d.question = f"{d.question} (→ merged into {merged_into[d.id]})"
         branches = []
         for b in d.branches:
             t = entry(b.next_id)

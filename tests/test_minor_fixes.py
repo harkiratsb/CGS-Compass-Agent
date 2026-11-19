@@ -50,3 +50,60 @@ def test_combine_with_takes_another_step_id(demo_model, all_assumed_run, setting
         with pytest.raises(ValueError):
             answer_and_rescore(run, demo_model, "steps.A2.combine_with", bad, settings)
     assert answer_and_rescore(run, demo_model, "steps.A2.combine_with", "A1", settings).steps["A2"].combine_with.value == "A1"
+
+
+# ---- M4, M5, M9, M14, M8
+
+STALE = "Written by the AI at run time; may not reflect later answers"
+
+
+def test_ai_summary_labelled_stale_after_an_answer(demo_model, acceptance_run, settings):
+    from framework.outputs import summary_markdown
+    run = acceptance_run.model_copy(deep=True)
+    run.summary_text, run.first_actions = "AI paragraph", ["one", "two", "three"]
+    assert STALE not in summary_markdown(run, demo_model)
+    after = answer_and_rescore(run, demo_model, "context.volume", "40", settings)
+    md = summary_markdown(after, demo_model)
+    assert md.count(STALE) >= 1 and md.index(STALE) < md.index("AI paragraph")
+
+
+def test_readiness_by_test_lists_the_five_tests(demo_model, acceptance_run, settings):
+    from framework.outputs import summary_markdown
+    run = acceptance_run.model_copy(deep=True)
+    run.steps["A2"].readiness["bus_factor"] = Answer(value=2, basis="answered")
+    sect = summary_markdown(run, demo_model).split("## Readiness by test")[1].split("## ")[0]
+    lines = [l for l in sect.splitlines() if l.startswith("- ")]
+    assert len(lines) == 5
+    bus = next(l for l in lines if "Bus factor" in l)
+    assert "1 step override below 4" in bus
+
+
+def test_show_what_changed_keeps_combined_steps(demo_model, all_assumed_run, settings):
+    from framework.future import build_future_model
+    run = apply_rules(all_assumed_run, demo_model, settings)
+    run.steps["A5"].call, run.steps["A5"].combine_target = "Combine", "A4"
+    fut, markers = build_future_model(demo_model, run, show_removed=True)
+    a5 = next(a for a in fut.activities if a.id == "A5")
+    assert markers["A5"] == "removed" and "→ merged into A4" in a5.name
+    plain, _ = build_future_model(demo_model, run)
+    assert "A5" not in plain.node_ids()
+
+
+def test_skipped_at_low_gate_note(demo_model, all_assumed_run, settings):
+    from framework.outputs import skipped_at_low_gate
+    from schema import AgentStep
+    run = all_assumed_run.model_copy(deep=True)
+    for k in GATE_KEYS:
+        run.doc_gate[k] = Answer(value="N", basis="answered")
+    run = apply_rules(run, demo_model, settings)
+    run.trace = [AgentStep(id="F4", name="Step Removal, pass 1", agent="Step Removal", kind="code",
+                           summary="Skipped: documentation confidence is Low (document first).", status="warning")]
+    assert run.gate_band == "Low" and not skipped_at_low_gate(run)
+    for k in GATE_KEYS:
+        run = answer_and_rescore(run, demo_model, f"doc_gate.{k}", "Y", settings)
+    assert run.gate_band == "High" and skipped_at_low_gate(run)
+
+
+def test_screen_text_scrubs_nicknames(demo_model):
+    from phase3_ui import _Ctx
+    assert "Liz" not in _Ctx(demo_model, ["Elizabeth"]).clean("Liz approves")

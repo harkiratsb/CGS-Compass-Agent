@@ -29,7 +29,8 @@ from framework.models import (
     DIAL_KEYS, R_KEYS, R_MOVE, READINESS_KEYS, SCORE, YN, YNU, YPN, Answer, ChainStep, FrameworkRun,
     MapCheck, assumed, blank_run, get_answer,
 )
-from framework.rules import _step_answers, answered_answers, apply_rules, carry_answers, chain_compatible
+from framework.rules import (_step_answers, answered_answers, answers_key, apply_rules, carry_answers,
+                             chain_compatible)
 from framework.settings import Settings, load_settings
 from cgs_tools import tags_for
 from ingest import agent as _stage1
@@ -708,6 +709,7 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
     ai("Summary", "Summary", _summary_step)
 
     run.trace, run.artifacts, run.mode = trace, artifacts, "live"
+    run.summary_answers_key = answers_key(run)
     if not failed:   # a run with a failed AI step is never cached, so the next run retries it
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         (CACHE_DIR / f"framework_{key}.json").write_text(run.model_dump_json(indent=2))

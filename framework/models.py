@@ -142,6 +142,7 @@ class FrameworkRun(BaseModel):
     top_questions: list[TopQuestion] = Field(default_factory=list)   # cache, see framework/followups.py
     top_questions_key: str = ""                                      # the run state it was computed for
     summary_text: str = ""
+    summary_answers_key: str = ""     # the app answers the AI summary was written with (see rules.answers_key)
     first_actions: list[str] = Field(default_factory=list)
     trace: list[AgentStep] = Field(default_factory=list)
     artifacts: dict[str, Any] = Field(default_factory=dict)

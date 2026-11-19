@@ -228,8 +228,14 @@ names = speaker_names(ss.files) + with_nicknames([n.strip() for n in extra_names
 VIEW_STAGE1, VIEW_PHASE3 = "Stage 1 · Current state", "Phase 3 · Future state"
 ss.setdefault("view", VIEW_STAGE1)
 view = st.segmented_control("View", [VIEW_STAGE1, VIEW_PHASE3], key="view", label_visibility="collapsed")
+def _project_json() -> str:
+    fw = ss.framework
+    return save_project(ss.files, {k: ss.get(k, "") for k in INTAKE_KEYS}, model, ss.run, ss.mode,
+                        ss.map_reviewed, fw.model_dump() if hasattr(fw, "model_dump") else fw)
+
+
 if view == VIEW_PHASE3:
-    render_phase3(model, names)
+    render_phase3(model, names, save=_project_json)
     st.stop()
 
 tab_swim, tab_model, tab_pain, tab_json, tab_src, tab_agent = st.tabs(
