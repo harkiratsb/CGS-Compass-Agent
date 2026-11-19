@@ -381,12 +381,49 @@
           {
             "type": "Rules",
             "owner": "Director of Operations"
+          },
+          {
+            "type": "Agent",
+            "goal": "dropped: not in the chain"
           }
         ]
       },
       "ZZ9": {
         "chain": [],
         "specs": []
+      },
+      "A7": {
+        "chain": [
+          {
+            "name": "Draft outreach email",
+            "type": "Agent",
+            "role_id": "R3"
+          },
+          {
+            "name": "Approve outreach email",
+            "type": "Human approval",
+            "role_id": "R3"
+          },
+          {
+            "name": "Log contact",
+            "type": "Rules",
+            "role_id": "NOPE"
+          }
+        ],
+        "specs": [
+          {
+            "type": "Agent",
+            "goal": "Draft follow-up"
+          },
+          {
+            "type": "Human approval",
+            "authority": "Lead Owner"
+          },
+          {
+            "type": "Rules",
+            "owner": "Director of Operations"
+          }
+        ]
       }
     }
   },

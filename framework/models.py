@@ -96,6 +96,7 @@ class StepAssessment(BaseModel):
     readiness_min: int | None = None
     recommendation: Recommendation | None = None
     specs: list[dict] = Field(default_factory=list)
+    ai_chain: list[ChainStep] = Field(default_factory=list)   # set by the specs step; used while compatible
     made_unnecessary_by: str | None = None
 
 

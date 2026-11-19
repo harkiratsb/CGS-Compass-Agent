@@ -29,7 +29,7 @@ from framework.models import (
     DIAL_KEYS, R_KEYS, R_MOVE, READINESS_KEYS, SCORE, YN, YNU, YPN, Answer, ChainStep, FrameworkRun,
     MapCheck, assumed, blank_run, get_answer,
 )
-from framework.rules import _step_answers, apply_rules
+from framework.rules import _step_answers, apply_rules, chain_compatible
 from framework.settings import Settings, load_settings
 from cgs_tools import tags_for
 from ingest import agent as _stage1
@@ -86,7 +86,8 @@ def _coerce(v, allowed: tuple | None) -> tuple[Any, bool]:
 def parse_answers(raw: dict, keys: list[str], allowed: tuple | None, defaults: dict[str, Any],
                   questions: dict[str, str]) -> dict[str, Answer]:
     """AI output -> Answers. Missing, null or invalid -> assumed(default). The AI can only say
-    "stated" (needs a quote) or "assumed"; an assumed scored answer takes the framework default."""
+    "stated" (needs a quote) or "assumed"; an assumed answer takes the framework default
+    (for free text the AI's suggestion is kept in `reason`)."""
     raw = raw if isinstance(raw, dict) else {}
     out: dict[str, Answer] = {}
     for k in keys:
@@ -108,7 +109,9 @@ def parse_answers(raw: dict, keys: list[str], allowed: tuple | None, defaults: d
                    quotes=_quotes(item.get("quotes")), question=q)
         if a.basis == "assumed":
             upd: dict[str, Any] = {"confidence": "L"}
-            if allowed is not None and value != d:
+            if allowed is None:      # free text: an unquoted guess is never stored as the value
+                upd.update(value=d, reason=f"AI suggestion: {value}"[:300])
+            elif value != d:
                 upd.update(value=d, reason=f"AI suggested {value!r} without a quote; framework default used")
             a = a.model_copy(update=upd)
         out[k] = a
@@ -423,8 +426,14 @@ def _calls(run) -> str:
     return "; ".join(f"{sid}={st.call}" for sid, st in run.steps.items())
 
 
+def _known_context(run: FrameworkRun) -> dict[str, Any]:
+    """Context values backed by a quote or a person; assumptions never reach later prompts as fact."""
+    return {k: a.value for k, a in run.context.items()
+            if a.value is not None and a.basis in ("stated", "answered")}
+
+
 def _part2_context_step(run, c, s):
-    ctx = "; ".join(f"{k}: {a.value}" for k, a in run.context.items() if a.value is not None)
+    ctx = "; ".join(f"{k}: {v}" for k, v in _known_context(run).items())
     out = c.ask("part2_context", _system("Step Removal", "You revisit R1-R7 in the light of the business context."),
                 f"Part 2, pass 2 (context). Business context: {ctx or 'none stated'}.\nCurrent calls (code's): "
                 f"{_calls(run)}.\nReturn ONLY the R answers the business context changes, with quotes.\n"
@@ -520,8 +529,7 @@ def _valid_chain(raw, default: list[ChainStep], roles: set[str]) -> list[ChainSt
         chain = [ChainStep(**x) for x in raw]
     except (TypeError, ValidationError):
         return None
-    types, base = {x.type for x in chain}, {x.type for x in default}
-    if not chain or not base <= types or ("Agent" in types and "Agent" not in base):
+    if not chain_compatible(chain, default):
         return None
     for x in chain:
         if x.role_id not in roles:
@@ -552,9 +560,11 @@ def _specs_step(run, c, s):
             continue
         chain = _valid_chain(item.get("chain") or [], st.recommendation.chain, roles)
         if chain:
-            st.recommendation.chain = chain
+            st.ai_chain, st.recommendation.chain = chain, [x.model_copy() for x in chain]
             kept += 1
-        st.specs = [x for x in item.get("specs") or [] if isinstance(x, dict)]
+        types = {x.type for x in st.recommendation.chain}
+        specs = item.get("specs")
+        st.specs = [x for x in specs if isinstance(x, dict) and x.get("type") in types] if isinstance(specs, list) else []
     return out, run, f"{kept} of {len(ids)} chains taken from the AI (code default kept otherwise)"
 
 
@@ -562,7 +572,7 @@ def _summary_step(run, c, s):
     names = _names(c.model)
     results = {
         "process": c.model.process.name,
-        "context": {k: a.value for k, a in run.context.items() if a.value is not None},
+        "context": _known_context(run),
         "doc_confidence": f"{run.gate_score:g}/8 ({run.gate_band})",
         "redesign_potential": run.redesign_potential, "posture": run.posture, "waves": run.waves,
         "map_checks": [m.question for m in run.map_checks], "follow_ups": len(run.follow_ups),
@@ -577,26 +587,37 @@ def _summary_step(run, c, s):
                             f"{json.dumps(results, default=str)}\n"
                             'Return {"summary_text": str, "first_actions": [str, str, str]}')
     run.summary_text = str(out.get("summary_text") or "")
-    run.first_actions = [str(a) for a in out.get("first_actions") or [] if str(a).strip()][:3]
+    acts = out.get("first_actions")
+    run.first_actions = [str(a) for a in acts if str(a).strip()][:3] if isinstance(acts, list) else []
     return out, run, f"Summary written; {len(run.first_actions)} first actions"
 
 # --------------------------------------------------------------------------- pipeline
 
 
-def framework_hash(model: ProcessModel, parsed: list[ParsedFile]) -> str:
+def framework_hash(model: ProcessModel, parsed: list[ParsedFile], s: Settings | None = None) -> str:
+    """Map + source chunks (file, location, text) + the settings in force."""
     h = hashlib.sha256(model.model_dump_json().encode())
     for pf in parsed:
         for ch in pf.chunks:
-            h.update(ch.text.encode())
+            for part in (pf.name, ch.location, ch.text):
+                h.update(part.encode() + b"\0")
+            h.update(b"\1")
+    h.update(b"\2" + (s or load_settings()).model_dump_json().encode())
     return h.hexdigest()[:16]
 
 
 def _saved(key: str) -> FrameworkRun | None:
+    """A cached run, or the demo replay when its input hash matches. Unreadable files are a miss."""
     cache = CACHE_DIR / f"framework_{key}.json"
-    if cache.exists():
-        return FrameworkRun.model_validate_json(cache.read_text())
-    if DEMO_RUN.exists():
-        run = FrameworkRun.model_validate_json(DEMO_RUN.read_text())
+    for path, replay in ((cache, False), (DEMO_RUN, True)):
+        try:
+            if not path.exists():
+                continue
+            run = FrameworkRun.model_validate_json(path.read_text())
+        except (ValidationError, ValueError, OSError):
+            continue
+        if not replay:
+            return run
         if run.artifacts.get("input_hash") == key:
             run.mode = "replay"
             return run
@@ -609,14 +630,15 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
                   names: list[str] | None = None) -> FrameworkRun:
     progress = progress or (lambda st: None)
     s = s or load_settings()
-    key = framework_hash(model, parsed)
+    key = framework_hash(model, parsed, s)
     if not force_live:
         run = _saved(key)
         if run is not None:
-            run.map_reviewed = map_reviewed
             for st in run.trace:
                 progress(st)
-            return run
+            run.map_reviewed = map_reviewed
+            run.success_end = success_end or run.success_end
+            return apply_rules(run, model, s, names)
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError(NO_KEY)
 
@@ -641,14 +663,17 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
            f"{len(facts.steps)} steps, {len(parsed)} source files, success end {facts.success_end}; "
            f"{len(facts.main_path)} steps on the main path")
 
+    failed = False
+
     def ai(name, agent, fn, rules=False, model_name=MODEL):
-        nonlocal run
+        nonlocal run, failed
         t0 = time.time()
         try:
             out, new, summary = fn(run.model_copy(deep=True), c, s)
             run = new
             record(name, agent, "llm", summary, out, model_name, t0=t0)
         except Exception as e:  # noqa: BLE001 - a run never stops; answers stay at the defaults
+            failed = True
             record(name, agent, "llm", f"Failed ({str(e)[:120]}); answers stay at the framework defaults.",
                    model_name=model_name, status="warning", t0=t0)
         if rules:
@@ -674,6 +699,7 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
     ai("Summary", "Summary", _summary_step)
 
     run.trace, run.artifacts, run.mode = trace, artifacts, "live"
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    (CACHE_DIR / f"framework_{key}.json").write_text(run.model_dump_json(indent=2))
+    if not failed:   # a run with a failed AI step is never cached, so the next run retries it
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        (CACHE_DIR / f"framework_{key}.json").write_text(run.model_dump_json(indent=2))
     return run

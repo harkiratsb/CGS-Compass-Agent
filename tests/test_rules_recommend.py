@@ -234,3 +234,55 @@ def test_answered_after_cap_not_restored(demo_model, all_assumed_run, settings):
     a = again.steps["A2"].dials["stakes"]
     assert (a.basis, a.value, a.confidence) == ("answered", 2, "H")
     assert not any(f.startswith("confidence capped") for f in a.flags)
+
+
+def _agentify(run, sid):
+    """Answer A1 and A4 so the step's code tier is Agent (dials stay at 3, Rule clarity 1)."""
+    for k in ("A1", "A4"):
+        run.steps[sid].agent_test[k] = Answer(value="Y", basis="answered")
+
+
+def test_made_unnecessary_by_kept_while_target_is_a_kept_agent(all_assumed_run, demo_model, settings):
+    run = all_assumed_run.model_copy(deep=True)
+    _agentify(run, "A7")
+    run.steps["A3"].made_unnecessary_by = "A7"
+    out = apply_rules(run, demo_model, settings)
+    assert out.steps["A7"].tier.tier == "Agent" and out.steps["A3"].made_unnecessary_by == "A7"
+
+
+def test_made_unnecessary_by_cleared_when_target_is_not_agent(all_assumed_run, demo_model, settings):
+    run = all_assumed_run.model_copy(deep=True)
+    run.steps["A3"].made_unnecessary_by = "A7"          # A7 fails the agent test -> Rules + Human task
+    assert apply_rules(run, demo_model, settings).steps["A3"].made_unnecessary_by is None
+
+
+def test_made_unnecessary_by_cleared_when_target_is_not_kept(all_assumed_run, demo_model, settings):
+    run = all_assumed_run.model_copy(deep=True)
+    _agentify(run, "A7")
+    run.steps["A7"].r_pass1["R1"] = Answer(value="Y", basis="answered")   # A7 is removed
+    run.steps["A3"].made_unnecessary_by = "A7"
+    out = apply_rules(run, demo_model, settings)
+    assert out.steps["A7"].call == "Remove" and out.steps["A3"].made_unnecessary_by is None
+
+
+def test_made_unnecessary_by_mutual_pair_clears_both(all_assumed_run, demo_model, settings):
+    run = all_assumed_run.model_copy(deep=True)
+    _agentify(run, "A7")
+    _agentify(run, "A6")
+    run.steps["A6"].made_unnecessary_by = "A7"
+    run.steps["A7"].made_unnecessary_by = "A6"
+    out = apply_rules(run, demo_model, settings)
+    assert out.steps["A6"].made_unnecessary_by is None and out.steps["A7"].made_unnecessary_by is None
+
+
+def test_ai_chain_used_only_while_compatible(all_assumed_run, demo_model, settings):
+    from framework.models import ChainStep
+    run = all_assumed_run.model_copy(deep=True)
+    _agentify(run, "A7")
+    run.steps["A7"].ai_chain = [ChainStep(name="Draft email", type="Agent"),
+                                ChainStep(name="Approve email", type="Human approval")]
+    out = apply_rules(run, demo_model, settings)
+    assert [c.name for c in out.steps["A7"].recommendation.chain] == ["Draft email", "Approve email"]
+    out.steps["A7"].agent_test["A4"] = Answer(value="N", basis="answered")   # now Rules + Human task
+    again = apply_rules(out, demo_model, settings)
+    assert [c.type for c in again.steps["A7"].recommendation.chain] == ["Rules", "Human task"]

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,11 @@ FAKE = "tests/fixtures/fake_ai_responses.json"
 def _isolated_cache(monkeypatch, tmp_path):
     monkeypatch.setattr("framework.agent.CACHE_DIR", tmp_path / "cache")
     monkeypatch.setattr("framework.agent.DEMO_RUN", tmp_path / "no_demo_run.json")
+
+
+def _cache_files():
+    import framework.agent as fa
+    return fa.CACHE_DIR.glob("framework_*.json") if fa.CACHE_DIR.exists() else []
 
 
 @pytest.fixture
@@ -100,7 +106,7 @@ def test_run_framework_end_to_end_values(live, demo_model, settings):
     assert [mc.type for mc in run.map_checks] == ["duplicate_gate"]
     a2 = run.steps["A2"]
     assert a2.worksheet["type_today"].basis == "stated" and a2.worksheet["type_today"].derived   # map prefill kept
-    assert a2.worksheet["channel"].value == "Insightly web form"
+    assert a2.worksheet["channel"].value is None and "Insightly web form" in a2.worksheet["channel"].reason
     assert "invalid AI value" in a2.r_pass1["R1"].flags
     assert a2.r_pass1["R3"].confidence == "L"                     # capped to M, then lowered by the verifier
     assert run.steps["D1"].call == "Remove"                       # R2 removes a gate check (code's call)
@@ -113,7 +119,10 @@ def test_run_framework_end_to_end_values(live, demo_model, settings):
     assert run.readiness_defaults["people"].value == 1 and "invalid AI value" in run.readiness_defaults["people"].flags
     assert run.steps["A2"].readiness["data_systems"].value == 3
     assert [c.type for c in run.steps["A2"].recommendation.chain] == ["Rules", "Human task"]  # bad AI chain -> code default
-    assert run.steps["A2"].specs == [{"type": "Rules", "owner": "Director of Operations"}]
+    assert run.steps["A2"].specs == [{"type": "Rules", "owner": "Director of Operations"}]   # Agent spec dropped
+    a7 = run.steps["A7"]
+    assert [x.type for x in a7.recommendation.chain] == ["Agent", "Human approval", "Rules"]
+    assert a7.recommendation.chain[2].role_id is None and len(a7.specs) == 3
     assert len(run.first_actions) == 3 and run.summary_text
     labels = [t.agent for t in run.trace]
     for label in ("Process vs Workflow Disambiguation", "Readiness", "Verifier (independent)",
@@ -176,6 +185,7 @@ def test_failed_ai_step_does_not_stop_the_run(monkeypatch, demo_model, settings)
     step = next(t for t in run.trace if t.agent == "Process vs Workflow Disambiguation")
     assert step.status == "warning"
     assert run.steps["A2"].dials["rule_clarity"].basis == "assumed"
+    assert not list(_cache_files())   # a failed run is never cached
 
 
 def test_stage1_context_includes_pain_points_and_run(demo_model):
@@ -233,3 +243,70 @@ def test_run_framework_without_key_or_cache(monkeypatch, demo_model, tmp_path):
     m = demo_model.model_copy(deep=True); m.process.name = "Something else"
     with pytest.raises(RuntimeError, match="No API key"):
         run_framework(m, [], map_reviewed=False)
+
+
+def test_rescore_keeps_a_valid_ai_chain_and_drops_an_incompatible_one(live, demo_model, settings):
+    run = run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings)
+    again = apply_rules(run, demo_model, settings)
+    assert [x.name for x in again.steps["A7"].recommendation.chain][0] == "Draft outreach email"
+    again.steps["A7"].dials["stakes"] = Answer(value=5, basis="answered")      # tier becomes Human
+    human = apply_rules(again, demo_model, settings).steps["A7"]
+    assert human.tier.tier == "Human"
+    assert [x.type for x in human.recommendation.chain] == ["Human task"]
+
+
+def test_cache_hit_rescoring_honours_success_end_and_map_reviewed(live, demo_model, settings, monkeypatch):
+    first = run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings)
+    other_end = next(e for e in graph_facts(demo_model).end_ids if e != first.success_end)
+    monkeypatch.setattr("framework.agent._call", lambda *a, **k: pytest.fail("cache should be used"))
+    again = run_framework(demo_model, [], map_reviewed=False, success_end=other_end, s=settings)
+    assert again.success_end == other_end and not again.map_reviewed
+    assert [x.type for x in again.steps["A7"].recommendation.chain] == ["Agent", "Human approval", "Rules"]
+
+
+def test_corrupt_cache_file_is_a_miss(live, demo_model, settings):
+    import framework.agent as fa
+    fa.CACHE_DIR.mkdir(parents=True)
+    (fa.CACHE_DIR / f"framework_{fa.framework_hash(demo_model, [], settings)}.json").write_text("{not json")
+    fa.DEMO_RUN.write_text('{"mode": "nonsense"}')
+    run = run_framework(demo_model, [], map_reviewed=True, s=settings)
+    assert run.mode == "live" and run.trace
+
+
+def test_unquoted_free_text_is_not_treated_as_fact(monkeypatch, demo_model, settings):
+    prompts = []
+    fake = fake_call_from(FAKE)
+    monkeypatch.setattr("framework.agent._call", lambda system, user, **k: prompts.append(user) or fake(system, user, **k))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    run = run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings)
+    vol = run.context["volume"]
+    assert vol.value is None and vol.basis == "assumed" and "About 10 leads a month" in vol.reason
+    later = [u for u in prompts if u.startswith(("[STEP:part2_context]", "[STEP:summary]"))]
+    assert len(later) == 2 and not any("About 10 leads" in u for u in later)
+    assert all("signed engagement" in u for u in later)                    # the stated outcome does go in
+
+
+def test_first_actions_must_be_a_list(monkeypatch, demo_model, settings):
+    fake = fake_call_from(FAKE)
+
+    def call(system, user, **k):
+        if user.startswith("[STEP:summary]"):
+            return json.dumps({"summary_text": "x", "first_actions": "Do everything"})
+        return fake(system, user, **k)
+    monkeypatch.setattr("framework.agent._call", call)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    assert run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings).first_actions == []
+
+
+def test_framework_hash_covers_names_locations_and_settings(demo_model, settings):
+    from framework.agent import framework_hash
+
+    def pf(name, loc, text="t"):
+        return [ParsedFile(name=name, kind="transcript", chunks=[Chunk(file=name, location=loc, text=text)])]
+    base = framework_hash(demo_model, pf("a.md", "1"), settings)
+    assert base != framework_hash(demo_model, pf("b.md", "1"), settings)
+    assert base != framework_hash(demo_model, pf("a.md", "2"), settings)
+    assert framework_hash(demo_model, pf("a", "b"), settings) != framework_hash(demo_model, pf("ab", ""), settings)
+    changed = settings.model_copy(deep=True)
+    changed.defaults.dial = 2
+    assert base != framework_hash(demo_model, pf("a.md", "1"), changed)

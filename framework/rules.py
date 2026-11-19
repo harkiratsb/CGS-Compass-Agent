@@ -241,6 +241,12 @@ def _chain(t: TierResult) -> list[ChainStep]:
     return [ChainStep(name=x, type=x) for x in types]
 
 
+def chain_compatible(chain: list[ChainStep], code: list[ChainStep]) -> bool:
+    """An AI chain may refine code's chain: it keeps every type code chose and adds no Agent."""
+    types, base = {x.type for x in chain}, {x.type for x in code}
+    return bool(chain) and base <= types and ("Agent" in base or "Agent" not in types)
+
+
 def recommend(step: StepAssessment, s: Settings) -> Recommendation:
     if step.call == "Fix the map":
         return Recommendation(action="Ask the owner, then rescore", wave=0)
@@ -257,7 +263,10 @@ def recommend(step: StepAssessment, s: Settings) -> Recommendation:
         action, wave = label, tier_wave
     ready = step.readiness_min if step.readiness_min is not None else s.defaults.readiness
     harden = t.tier in ("Rules", "Agent") and ready < s.readiness.ready_min
-    return Recommendation(action=action, wave=wave, harden_first=harden, chain=_chain(t))
+    chain = _chain(t)
+    if step.ai_chain and chain_compatible(step.ai_chain, chain):
+        chain = [c.model_copy() for c in step.ai_chain]
+    return Recommendation(action=action, wave=wave, harden_first=harden, chain=chain)
 
 
 def posture(run: FrameworkRun, facts: GraphFacts) -> list[str]:
@@ -407,6 +416,15 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
         if (st.tier.tier in ("Rules", "Agent") and st.recommendation.wave != 0
                 and (sop is None or sop.value != "Y")):
             st.recommendation.action += "; Write the SOP"
+
+    # made_unnecessary_by holds only while the target is a kept Agent step that is not itself
+    # made unnecessary (checked against this pass's values, so mutual pairs clear both)
+    marked = {sid for sid, st in run.steps.items() if st.made_unnecessary_by}
+    for sid in marked:
+        st, target = run.steps[sid], run.steps.get(run.steps[sid].made_unnecessary_by)
+        if (target is None or target.tier is None or target.tier.tier != "Agent"
+                or target.call != "Keep" or st.made_unnecessary_by in marked):
+            st.made_unnecessary_by = None
 
     run.posture = posture(run, facts)
     run.waves = waves(run)
