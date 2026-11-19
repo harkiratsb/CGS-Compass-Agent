@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from framework.graph import GraphFacts, graph_facts
+from typing import Any
+
 from framework.models import (
+    A_KEYS, CONTEXT_KEYS, DIAL_KEYS, D_KEYS, GATE_KEYS, WORKSHEET_KEYS, _STEP_SINGLES, allowed_values,
     READINESS_KEYS, R_KEYS, Answer, Call, ChainStep, FollowUp, FrameworkRun, Recommendation,
     StepAssessment, TierResult,
 )
@@ -430,3 +433,110 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
     run.waves = waves(run)
     run.follow_ups = follow_ups(run, facts.steps)
     return run
+
+
+# ------------------------------------------------------------ answering follow-ups
+
+_RUN_FAMILIES = {
+    "doc_gate": GATE_KEYS, "context": CONTEXT_KEYS, "readiness_defaults": READINESS_KEYS,
+}
+_STEP_FAMILY_KEYS = {
+    "worksheet": WORKSHEET_KEYS, "r_pass1": R_KEYS, "r_pass2": R_KEYS, "tier1": D_KEYS,
+    "dials": DIAL_KEYS, "agent_test": A_KEYS, "readiness": READINESS_KEYS,
+}
+_HISTORY_FIELDS = ("value", "basis", "reason", "confidence", "question", "derived")
+
+
+def _locate(run: FrameworkRun, path: str):
+    """Return (container, key, is_attr) for a valid answer path, else KeyError.
+
+    A dict-family key may not exist yet but must be a known key; a single step field may be None."""
+    parts = path.split(".")
+    if parts[0] in _RUN_FAMILIES and len(parts) == 2:
+        d = getattr(run, parts[0])
+        if parts[1] in d or parts[1] in _RUN_FAMILIES[parts[0]]:
+            return d, parts[1], False
+    elif parts[0] == "steps" and len(parts) >= 3 and parts[1] in run.steps:
+        st = run.steps[parts[1]]
+        if len(parts) == 4 and parts[2] in _STEP_FAMILY_KEYS:
+            d = getattr(st, parts[2])
+            if parts[3] in d or parts[3] in _STEP_FAMILY_KEYS[parts[2]]:
+                return d, parts[3], False
+        elif len(parts) == 3 and parts[2] in _STEP_SINGLES:
+            return st, parts[2], True
+    raise KeyError(path)
+
+
+def _clean_answer(path: str, value: Any) -> Any:
+    allowed = allowed_values(path)
+    if allowed is None:
+        if isinstance(value, bool) or value is None:
+            raise ValueError("An answer can't be empty.")
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        raise ValueError("An answer can't be empty.")
+    shown = ", ".join(str(a) for a in allowed)
+    bad = ValueError(f"{value} isn't allowed here. Choose one of: {shown}")
+    if isinstance(value, bool):
+        raise bad
+    if all(isinstance(a, int) for a in allowed):
+        try:
+            num = float(value.strip()) if isinstance(value, str) else float(value)
+        except (TypeError, ValueError):
+            raise bad
+        if num != int(num) or int(num) not in allowed:
+            raise bad
+        return int(num)
+    if isinstance(value, str):
+        v = value.strip()
+        for a in allowed:
+            if v == a or v.lower() == str(a).lower():
+                return a
+    raise bad
+
+
+def _put(container, key: str, is_attr: bool, answer: Answer | None) -> None:
+    if is_attr:
+        setattr(container, key, answer)
+    elif answer is None:
+        container.pop(key, None)
+    else:
+        container[key] = answer
+
+
+def answer_and_rescore(run: FrameworkRun, model: ProcessModel, path: str, value: Any,
+                       s: Settings, reason: str = "Answered in the app") -> FrameworkRun:
+    """Record a person's answer (basis answered, confidence H), keep the old one in history,
+    and re-run the rules. No AI call. The run passed in is never modified."""
+    value = _clean_answer(path, value)
+    run = run.model_copy(deep=True)
+    container, key, is_attr = _locate(run, path)
+    old = getattr(container, key) if is_attr else container.get(key)
+    if old is None:
+        history = [{"absent": True}]
+    else:
+        entry = {f: getattr(old, f) for f in _HISTORY_FIELDS}
+        entry["quotes"] = [q.model_dump() for q in old.quotes]
+        history = [*old.history, entry]
+    _put(container, key, is_attr,
+         Answer(value=value, basis="answered", reason=reason, confidence="H", history=history))
+    return apply_rules(run, model, s)
+
+
+def undo_answer(run: FrameworkRun, model: ProcessModel, path: str, s: Settings) -> FrameworkRun:
+    """Put back the answer that was replaced last. ValueError if there is nothing to undo."""
+    run = run.model_copy(deep=True)
+    container, key, is_attr = _locate(run, path)
+    cur = getattr(container, key) if is_attr else container.get(key)
+    if cur is None or not cur.history:
+        raise ValueError("There is nothing to undo here.")
+    entry, rest = cur.history[-1], cur.history[:-1]
+    if entry.get("absent"):
+        _put(container, key, is_attr, None)
+    else:
+        fields = {f: entry[f] for f in _HISTORY_FIELDS if f in entry}
+        restored = Answer(**fields, quotes=entry.get("quotes", []), history=rest)
+        _put(container, key, is_attr, restored)
+    return apply_rules(run, model, s)
