@@ -170,8 +170,10 @@ def get_answer(run: FrameworkRun, path: str) -> Answer:
     raise KeyError(path)
 
 
-def allowed_values(path: str) -> tuple | None:
-    """Allowed values for an answer path; None means free text or a number."""
+def allowed_values(path: str, step_ids: list[str] | None = None) -> tuple | None:
+    """Allowed values for an answer path; None means free text or a number.
+
+    combine_with takes another step's id: pass the run's step ids to get them."""
     parts = path.split(".")
     if parts[0] == "doc_gate":
         return YPN
@@ -185,6 +187,8 @@ def allowed_values(path: str) -> tuple | None:
             return R_MOVE
         if family == "accountability":
             return YN
+        if family == "combine_with" and step_ids is not None:
+            return tuple(i for i in step_ids if i != parts[1])
         if family == "tier1":
             return YPN
         if family in ("dials", "readiness"):

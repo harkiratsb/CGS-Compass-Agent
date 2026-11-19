@@ -406,7 +406,7 @@
           },
           {
             "name": "Log contact",
-            "type": "Rules",
+            "type": "Human task",
             "role_id": "NOPE"
           }
         ],
@@ -420,8 +420,8 @@
             "authority": "Lead Owner"
           },
           {
-            "type": "Rules",
-            "owner": "Director of Operations"
+            "type": "Human task",
+            "what": "Log the contact"
           }
         ]
       }

@@ -121,7 +121,7 @@ def test_run_framework_end_to_end_values(live, demo_model, settings):
     assert [c.type for c in run.steps["A2"].recommendation.chain] == ["Rules", "Human task"]  # bad AI chain -> code default
     assert run.steps["A2"].specs == [{"type": "Rules", "owner": "Director of Operations"}]   # Agent spec dropped
     a7 = run.steps["A7"]
-    assert [x.type for x in a7.recommendation.chain] == ["Agent", "Human approval", "Rules"]
+    assert [x.type for x in a7.recommendation.chain] == ["Agent", "Human approval", "Human task"]
     assert a7.recommendation.chain[2].role_id is None and len(a7.specs) == 3
     assert len(run.first_actions) == 3 and run.summary_text
     labels = [t.agent for t in run.trace]
@@ -261,7 +261,7 @@ def test_cache_hit_rescoring_honours_success_end_and_map_reviewed(live, demo_mod
     monkeypatch.setattr("framework.agent._call", lambda *a, **k: pytest.fail("cache should be used"))
     again = run_framework(demo_model, [], map_reviewed=False, success_end=other_end, s=settings)
     assert again.success_end == other_end and not again.map_reviewed
-    assert [x.type for x in again.steps["A7"].recommendation.chain] == ["Agent", "Human approval", "Rules"]
+    assert [x.type for x in again.steps["A7"].recommendation.chain] == ["Agent", "Human approval", "Human task"]
 
 
 def test_corrupt_cache_file_is_a_miss(live, demo_model, settings):

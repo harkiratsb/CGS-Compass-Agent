@@ -104,7 +104,8 @@ def _answer_rows(c: _Ctx, items) -> pd.DataFrame:
 def _input(path: str, current, key: str, blank: bool = False, label: str | None = None):
     """A selectbox for answers with allowed values, else a text box."""
     label = label or path.split(".")[-1]
-    allowed = allowed_values(path)
+    run = _ss().get("framework")
+    allowed = allowed_values(path, list(run.steps) if run is not None else None)   # combine_with: step ids
     if allowed is not None:
         opts = list(allowed)
         idx = None if blank else next((i for i, o in enumerate(opts) if str(o) == str(current)), None)

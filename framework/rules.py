@@ -258,9 +258,10 @@ def _chain(t: TierResult) -> list[ChainStep]:
 
 
 def chain_compatible(chain: list[ChainStep], code: list[ChainStep]) -> bool:
-    """An AI chain may refine code's chain: it keeps every type code chose and adds no Agent."""
+    """An AI chain may refine code's chain: it keeps every type code chose and adds no type code
+    didn't choose, except an extra Human task (so no Agent, and no Human approval code dropped)."""
     types, base = {x.type for x in chain}, {x.type for x in code}
-    return bool(chain) and base <= types and ("Agent" in base or "Agent" not in types)
+    return bool(chain) and base <= types and types <= base | {"Human task"}
 
 
 def recommend(step: StepAssessment, s: Settings) -> Recommendation:
@@ -452,15 +453,16 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
             run.doc_gate[k] = a
     run.gate_score, run.gate_band = score_gate(run.doc_gate, s)
 
-    # Medium: keep the values, flag them and cap confidence at M (flag is re-derived each pass)
-    for st in run.steps.values():
-        for _, a in _step_answers(st):
-            _uncap(a)
-            if _MEDIUM_FLAG in a.flags:
-                a.flags = [f for f in a.flags if f != _MEDIUM_FLAG]
-            if run.gate_band == "Medium" and a.basis != "answered":
-                a.flags.append(_MEDIUM_FLAG)
-                _cap_m(a, "doc Medium")
+    # Medium: keep the values, flag them and cap confidence at M (flag is re-derived each pass);
+    # process-level context and readiness answers too
+    process = [a for fam in ("context", "readiness_defaults") for a in getattr(run, fam).values()]
+    for a in process + [a for st in run.steps.values() for _, a in _step_answers(st)]:
+        _uncap(a)
+        if _MEDIUM_FLAG in a.flags:
+            a.flags = [f for f in a.flags if f != _MEDIUM_FLAG]
+        if run.gate_band == "Medium" and a.basis != "answered":
+            a.flags.append(_MEDIUM_FLAG)
+            _cap_m(a, "doc Medium")
 
     # single-source cap
     cov = source_coverage(model)
@@ -514,7 +516,7 @@ _STEP_FAMILY_KEYS = {
     "worksheet": WORKSHEET_KEYS, "r_pass1": R_KEYS, "r_pass2": R_KEYS, "tier1": D_KEYS,
     "dials": DIAL_KEYS, "agent_test": A_KEYS, "readiness": READINESS_KEYS,
 }
-_HISTORY_FIELDS = ("value", "basis", "reason", "confidence", "question", "derived")
+_HISTORY_FIELDS = ("value", "basis", "reason", "confidence", "question", "derived", "flags")
 
 
 def _locate(run: FrameworkRun, path: str):
@@ -537,8 +539,8 @@ def _locate(run: FrameworkRun, path: str):
     raise KeyError(path)
 
 
-def _clean_answer(path: str, value: Any) -> Any:
-    allowed = allowed_values(path)
+def _clean_answer(path: str, value: Any, step_ids: list[str] | None = None) -> Any:
+    allowed = allowed_values(path, step_ids)
     if allowed is None:
         if isinstance(value, bool) or value is None:
             raise ValueError("An answer can't be empty.")
@@ -608,12 +610,12 @@ def answer_and_rescore(run: FrameworkRun, model: ProcessModel, path: str, value:
     and re-run the rules. No AI call. The run passed in is never modified."""
     run = run.model_copy(deep=True)
     container, key, is_attr = _locate(run, path)
-    value = _clean_answer(path, value)
+    value = _clean_answer(path, value, list(run.steps))
     old = getattr(container, key) if is_attr else container.get(key)
     if old is None:
         history = [{"absent": True}]
     else:
-        entry = {f: getattr(old, f) for f in _HISTORY_FIELDS}
+        entry = {f: list(getattr(old, f)) if f == "flags" else getattr(old, f) for f in _HISTORY_FIELDS}
         entry["quotes"] = [q.model_dump() for q in old.quotes]
         history = [*old.history, entry]
     _put(container, key, is_attr,
