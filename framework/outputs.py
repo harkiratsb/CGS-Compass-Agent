@@ -9,6 +9,7 @@ import csv
 import io
 
 from framework.graph import graph_facts
+from framework.impact import Impact, impact
 from framework.models import R_KEYS, Answer, FrameworkRun, StepAssessment
 from framework.models import READINESS_KEYS
 from framework.rules import _score, _step_answers, _tier_label, r_answer, summary_is_stale
@@ -126,6 +127,45 @@ def skipped_at_low_gate(run: FrameworkRun) -> bool:
         t.kind == "code" and t.summary.startswith("Skipped: documentation confidence is Low") for t in run.trace)
 
 
+def _n(x: float) -> str:
+    return f"{x:,.1f}".rstrip("0").rstrip(".")
+
+
+def impact_lines(imp: Impact) -> list[str]:
+    """Plain lines for the Expected impact section; every figure comes from the map and the run."""
+    s = "s" if imp.steps_with_minutes != 1 else ""
+    out = [f"- Hands-on time today: {_n(imp.total_minutes)} minutes per lead across {imp.steps_with_minutes} "
+           f"step{s} ({_n(imp.stated_minutes)} stated, {_n(imp.estimated_minutes)} estimated)"
+           + (f"; {imp.steps_without_minutes} step{'s' if imp.steps_without_minutes != 1 else ''} "
+              "with no minutes recorded" if imp.steps_without_minutes else "")]
+    out.append(f"- Removed: {_n(imp.removed_minutes)} minutes per lead on {len(imp.removed_steps)} "
+               f"step{'s' if len(imp.removed_steps) != 1 else ''}")
+    if imp.conditional_minutes:
+        out.append(f"  - {_n(imp.always_minutes)} minutes on every lead; {_n(imp.conditional_minutes)} minutes "
+                   "only when a decision branch is taken, so the total is an upper bound")
+    if imp.merged_steps:
+        out.append(f"- Merged, time not removed: {_n(imp.merged_minutes)} minutes "
+                   f"({', '.join(m.step_id for m in imp.merged_steps)})")
+    for r in imp.freed_roles:
+        out.append(f"- No human step left for {r.name}: {r.steps_before} step{'s' if r.steps_before != 1 else ''} "
+                   f"to 0 ({_n(r.removed_minutes)} minutes removed)")
+    if not imp.freed_roles:
+        out.append("- No role is left without a human step")
+    out.append(f"- Decision points: {imp.decisions_before} before, {imp.decisions_after} after")
+    out.append(f"- Pain points: {imp.pains_resolved} of {imp.pains_total} are on removed or moved steps; "
+               f"{imp.pains_open} still open")
+    if imp.hours_per_month is None:
+        out.append(f"- {imp.volume_gap}")
+    else:
+        lead = f"- At {_n(imp.leads_per_month)} leads a month: "
+        if imp.conditional_minutes:
+            out.append(lead + f"up to {_n(imp.hours_per_month)} hours a month saved (upper bound), "
+                       f"{_n(imp.hours_per_month_always)} hours on steps every lead goes through")
+        else:
+            out.append(lead + f"{_n(imp.hours_per_month)} hours a month saved")
+    return out
+
+
 def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None, s=None) -> str:
     from framework.settings import load_settings
 
@@ -157,6 +197,7 @@ def summary_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | 
             [f"- {mc.question} (steps {', '.join(mc.step_ids)})" for mc in run.map_checks]
             or ["None found"])
     section("Redesign potential", [f"{run.redesign_potential} of 5"])
+    section("Expected impact", impact_lines(impact(run, model)))
 
     tiers: dict[str, list[str]] = {}
     for r in rows:

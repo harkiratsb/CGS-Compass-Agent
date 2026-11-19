@@ -41,6 +41,7 @@ def test_summary_sections_and_gaps(demo_model, all_assumed_run, settings):
     md = summary_markdown(apply_rules(all_assumed_run, demo_model, settings), demo_model)
     heads = [l[3:] for l in md.splitlines() if l.startswith("## ")]
     assert heads == ["Outcome and goal", "Documentation confidence", "Open map questions", "Redesign potential",
+                     "Expected impact",
                      "Steps by tier", "Readiness by test", "Posture", "Waves", "First three actions", "Gaps"]
     assert "Gap:" in md
 

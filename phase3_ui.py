@@ -14,6 +14,7 @@ import streamlit as st
 
 from framework.agent import framework_hash, run_framework
 from framework.future import build_future_model
+from framework.impact import impact
 from framework.models import Answer, FrameworkRun, allowed_values
 from framework.followups import ensure_top_questions
 from framework.outputs import (follow_ups_markdown, skipped_at_low_gate, step_table, step_table_csv,
@@ -514,6 +515,18 @@ def _future_screen(c: _Ctx):
     st.caption("⚙ Rules step · double border: Agent step · ✓ Human approval · plain: Human task. "
                "Removed and combined steps appear dashed in grey with **Show what changed**.")
     st.divider()
+    imp = impact(run, c.model)      # code only; recomputed on every answer, including the volume one
+    m = st.columns(3)
+    m[0].metric("Minutes saved per lead", f"{imp.removed_minutes:g}",
+                help="Hands-on minutes on removed steps. Merged steps are not counted."
+                     + (" Some sit behind a decision branch, so this is an upper bound."
+                        if imp.conditional_minutes else ""))
+    m[1].metric("Hours saved per month",
+                f"{imp.hours_per_month:,.1f}" if imp.hours_per_month is not None else "Needs volume",
+                help=None if imp.hours_per_month is not None
+                else "Answer the volume question on the Follow-ups screen.")
+    m[2].metric("Roles freed", len(imp.freed_roles),
+                help="Roles with no human step left in the future state.")
     with st.container(border=True):
         st.markdown(summary)
 
