@@ -3,7 +3,7 @@ import tomllib
 from pathlib import Path
 from typing import List
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator, model_validator
 
 DEFAULT_PATH = Path(__file__).with_name("settings.toml")
 
@@ -12,9 +12,22 @@ class Gate(BaseModel):
     high: float
     medium: float
 
+    @model_validator(mode="after")
+    def _ordered(self):
+        if self.high <= self.medium:
+            raise ValueError("gate.high must be greater than gate.medium")
+        return self
+
 
 class Redesign(BaseModel):
     bands: List[int]
+
+    @field_validator("bands")
+    @classmethod
+    def _four_ascending(cls, v):
+        if len(v) != 4 or any(b <= a for a, b in zip(v, v[1:])):
+            raise ValueError("redesign.bands must be 4 ascending numbers")
+        return v
 
 
 class Defaults(BaseModel):
@@ -67,10 +80,27 @@ class Settings(BaseModel):
     loop: Loop
 
 
+def _in_scale(model: BaseModel, where: str) -> None:
+    for k, v in model:
+        if not 1 <= v <= 5:
+            raise ValueError(f"{where}.{k} must be between 1 and 5, got {v}")
+
+
 def load_settings(path: Path | None = None) -> Settings:
-    with open(path or DEFAULT_PATH, "rb") as f:
-        data = tomllib.load(f)
+    path = Path(path or DEFAULT_PATH)
     try:
-        return Settings.model_validate(data)
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+    except FileNotFoundError as e:
+        raise ValueError(f"settings file not found: {path}") from e
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(f"settings file {path} is not valid TOML: {e}") from e
+    try:
+        s = Settings.model_validate(data)
     except ValidationError as e:
-        raise ValueError(f"invalid settings: {e}") from e
+        raise ValueError(f"invalid settings in {path}: {e}") from e
+    _in_scale(s.defaults, "defaults")
+    _in_scale(s.readiness, "readiness")
+    for name, group in s.tier:
+        _in_scale(group, f"tier.{name}")
+    return s
