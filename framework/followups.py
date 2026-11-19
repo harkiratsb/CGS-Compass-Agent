@@ -5,9 +5,10 @@ the screen and the export show only the top `n` (10), found by one counterfactua
 set the answer to the value that would flip it, run the rules (code only) and see what changes.
 
 Ranking: steps whose call could change, then tier, then wave / readiness / posture / redesign
-potential; main path first, then map order. After them: the process readiness defaults (they
-decide Harden first), documentation checks that could move the band, and last the context
-questions the next AI run uses (goal, baselines, volume).
+potential; main path first, then map order. At most 4 are step-removal questions (steps being
+removed first, then Keep steps) and at most one per step; the rest are tier, dial, agent-test,
+accountability, process readiness defaults and documentation checks, by effect. An assumed volume
+is always included (hours saved per month); goal and baselines come last, if slots remain.
 
 The result is cached on the run (top_questions + top_questions_key) and recomputed only when the
 run state changes, so it does not run on every Streamlit rerun.
@@ -27,6 +28,8 @@ from schema import ProcessModel
 
 CONTEXT_NEXT_RUN = ("goal", "baselines", "volume")
 NEXT_RUN_LABEL = " (used on the next AI run)"
+VOLUME_LABEL = " (needed for hours saved per month)"
+MAX_REMOVAL = 4
 _CACHE_EXCLUDE = {"top_questions", "top_questions_key", "trace", "artifacts", "summary_text",
                   "first_actions", "follow_ups", "mode"}
 
@@ -256,6 +259,18 @@ def _question(c: _Cand, run: FrameworkRun, effect: str) -> TopQuestion:
                        current=current, effect=effect, step_id=c.step_id)
 
 
+def _is_removal(c: _Cand) -> bool:
+    """A step-removal question: the R tests, the move-or-remove and the combine follow-ups."""
+    return any(".r_pass1." in p or p.endswith(".r_move") or p.endswith(".combine_with") for p in c.values)
+
+
+def _r_codes(keys: list[str]) -> str:
+    idx = [R_KEYS.index(k) for k in keys]
+    if len(keys) > 2 and idx == list(range(idx[0], idx[0] + len(idx))):
+        return f"{keys[0]}\u2013{keys[-1]}"
+    return ", ".join(keys)
+
+
 def top_follow_ups(run: FrameworkRun, model: ProcessModel, s: Settings, names: list[str] | None = None,
                    n: int = 10) -> list[TopQuestion]:
     """The top `n` open questions (see the module docstring). Code only; `run` is left as it was."""
@@ -263,8 +278,11 @@ def top_follow_ups(run: FrameworkRun, model: ProcessModel, s: Settings, names: l
     facts = graph_facts(model, run.success_end)
     base = _signature(apply_rules(run, model, s, names))
     order = {sid: i for i, sid in enumerate(facts.steps)}
+    vol = run.context.get("volume")
+    volume = _assumed(vol)
+    room = n - (1 if volume else 0)
 
-    ranked = []
+    pool = []      # (sort key, candidate, what, is removal)
     for seq, c in enumerate(_step_candidates(run, model, s, facts)):
         level, what = _effect(base, _try(run, model, s, names, c.values), model)
         if len(c.values) > 1 and all(".r_pass1." in p for p in c.values):
@@ -272,35 +290,59 @@ def top_follow_ups(run: FrameworkRun, model: ProcessModel, s: Settings, names: l
                 lv, wh = _effect(base, _try(run, model, s, names, {p: v}), model)
                 if lv > level:
                     level, what = lv, wh
-        if level:
-            ranked.append(((-level, c.step_id not in facts.main_path, order.get(c.step_id, 0), seq), c, what))
-    ranked.sort(key=lambda x: x[0])
-    out = [_question(c, run, f"Could change {what}") for _, c, what in ranked]
+        if not level:
+            continue
+        rm, keep = _is_removal(c), run.steps[c.step_id].call == "Keep"
+        main, pos = c.step_id not in facts.main_path, order.get(c.step_id, 0)
+        if rm and keep and all(".r_pass1." in p for p in c.values):
+            keys = [p.rsplit(".", 1)[1] for p in c.values]
+            c.question = (f"Is there any reason to drop {_label(model, c.step_id).replace(chr(34), chr(39))}? "
+                          f"(e.g. it exists only for an access limit, a handoff or habit) ({_r_codes(keys)})")
+        # removal questions: a step that is being removed first, a Keep step last; the rest by effect
+        pool.append(((0, keep, -level, main, pos, seq) if rm else (0, 0, -level, main, pos, seq), c, what, rm))
 
     ready = [k for k, a in run.readiness_defaults.items() if _assumed(a)]
-    if ready and len(out) < n:
+    if ready:
         c = _Cand("How ready is the process? Rate the readiness tests (1-5).",
                   {f"readiness_defaults.{k}": _ready_cross(run.readiness_defaults[k].value, s) for k in ready},
                   {f"readiness_defaults.{k}": run.readiness_defaults[k].question for k in ready})
         level, what = _effect(base, _try(run, model, s, names, c.values), model)
         if level:
-            out.append(_question(c, run, f"Could change {what} (readiness decides Harden first)"))
+            pool.append(((1, 0, -level, 0, 0, 0), c, f"{what} (readiness decides Harden first)", False))
 
-    for k, a in run.doc_gate.items():
-        if len(out) >= n:
-            break
+    for i, (k, a) in enumerate(run.doc_gate.items()):
         if _assumed(a):
             new = _try(run, model, s, names, {f"doc_gate.{k}": "N" if a.value == "Y" else "Y"})
             if new[1]["documentation band"] != base[1]["documentation band"]:
-                out.append(_question(_Cand(a.question, {f"doc_gate.{k}": None}), run,
-                                     f"Could move documentation confidence from {base[1]['documentation band']} "
-                                     f"to {new[1]['documentation band']}"))
+                c = _Cand(a.question, {f"doc_gate.{k}": None})
+                pool.append(((2, 0, -1, 0, 0, i), c, f"{base[1]['documentation band']} to "
+                             f"{new[1]['documentation band']}", False))
 
-    for k in CONTEXT_NEXT_RUN:
+    chosen, used, n_removal = [], set(), 0
+    for removal in (True, False):          # at most 4 removal questions first, then the rest by effect
+        for key, c, what, rm in sorted((p for p in pool if p[3] == removal), key=lambda x: x[0]):
+            if len(chosen) >= room or (removal and n_removal >= MAX_REMOVAL):
+                break
+            if c.step_id is not None and c.step_id in used:
+                continue                   # one question per step
+            used.add(c.step_id)
+            n_removal += removal
+            chosen.append((key, c, what))
+    chosen.sort(key=lambda x: (x[0][2], x[0][0], x[0][1:]))
+
+    out = []
+    for key, c, what in chosen:
+        if key[0] == 2:
+            what = f"Could move documentation confidence from {what}"
+        else:
+            what = f"Could change {what}"
+        out.append(_question(c, run, what))
+    if volume:
+        out.append(_question(_Cand(vol.question + VOLUME_LABEL, {"context.volume": None}), run,
+                             "Changes no result now; the hours saved per month need it"))
+    for k in ("goal", "baselines"):
         a = run.context.get(k)
-        if len(out) >= n:
-            break
-        if a is not None and a.basis == "assumed":
+        if len(out) < n and _assumed(a):
             out.append(_question(_Cand(a.question + NEXT_RUN_LABEL, {f"context.{k}": None}), run,
                                  "Changes no result now; the next AI run reads it"))
     return out[:n]

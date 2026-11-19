@@ -26,7 +26,7 @@ def test_demo_top_ten_change_results_and_run_fast(demo):
     top = top_follow_ups(run, model, s, names)
     assert time.time() - t0 < 2.5
     assert 0 < len(top) <= 10 and len(run.follow_ups) > 10
-    assert all(q.effect.startswith("Could") for q in top)
+    assert all(q.effect.startswith("Could") or q.paths[0].startswith("context.") for q in top)
     assert all(".worksheet." not in p for q in top for p in q.paths)
     assert top[0].effect.count("call") == 1                 # a call change ranks first
 
@@ -49,10 +49,12 @@ def test_groups_and_order(demo_model, all_assumed_run, settings):
     d = next(q for q in top if q.paths[0].endswith("tier1.D1"))
     assert d.question.startswith("Is ") and d.question.endswith("done digitally, a written standard way, with findable fields?")
     assert len(d.paths) == 3
-    assert any(len(q.paths) > 1 and ".agent_test." in q.paths[0] for q in top)
+    ids = [q.step_id for q in top if q.step_id]
+    assert len(ids) == len(set(ids))                       # one question per step, its best group
     ctx = [i for i, q in enumerate(top) if q.paths[0].startswith("context.")]
     assert ctx and ctx == list(range(len(top) - len(ctx), len(top)))      # context questions last
-    assert all(top[i].question.endswith("(used on the next AI run)") for i in ctx)
+    assert all(top[i].question.endswith(("(used on the next AI run)", "(needed for hours saved per month)"))
+               for i in ctx)
     assert {top[i].paths[0] for i in ctx} <= {"context.goal", "context.baselines", "context.volume"}
     ready = [i for i, q in enumerate(top) if q.paths[0].startswith("readiness_defaults.")]
     assert ready and ready[0] < ctx[0]
@@ -86,3 +88,32 @@ def test_grouped_removal_question_tries_each_member_alone(demo):
     top = top_follow_ups(r, model, s, names, n=500)
     assert time.time() - t0 < 4
     assert any(q.step_id == "A1" and "call" in q.effect for q in top)
+
+
+def _is_r(q):
+    return any(".r_pass1." in p or p.endswith((".r_move", ".combine_with")) for p in q.paths)
+
+
+def test_demo_top_ten_is_balanced(demo):
+    run, model, s, names = demo
+    top = top_follow_ups(run, model, s, names)
+    assert len(top) == 10
+    assert sum(_is_r(q) for q in top) <= 4
+    steps = [q.step_id for q in top if q.step_id]
+    assert len(steps) == len(set(steps))                              # one question per step
+    vol = [q for q in top if q.paths == ["context.volume"]]
+    assert run.context["volume"].basis == "assumed" and len(vol) == 1
+    assert vol[0].question.endswith("(needed for hours saved per month)")
+    assert all(q.effect.startswith("Could") or q.paths[0].startswith("context.") for q in top)
+    keep_r = [q for q in top if _is_r(q) and run.steps[q.step_id].call == "Keep"]
+    assert all(q.question.startswith("Is there any reason to drop") and "(R" in q.question for q in keep_r)
+    # steps already being removed or changed come before Keep steps among the removal questions
+    r_calls = [run.steps[q.step_id].call == "Keep" for q in top if _is_r(q)]
+    assert r_calls == sorted(r_calls)
+
+
+def test_goal_and_baselines_only_after_volume_with_room(demo):
+    run, model, s, names = demo
+    top = top_follow_ups(run, model, s, names, n=500)
+    ctx = [q.paths[0] for q in top if q.paths[0].startswith("context.")]
+    assert ctx[0] == "context.volume" and top[-len(ctx):] == [q for q in top if q.paths[0].startswith("context.")]
