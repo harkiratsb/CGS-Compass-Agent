@@ -1,27 +1,64 @@
-# CGS Process Discovery — Stage 1: Ingestion & Current-State Mapping
+# CGS Compass — AI-enabled process discovery and redesign
 
-Proof-of-concept for the first stage of the CGS AI-enabled process analysis MVP:
-ingest process materials → extract a structured current-state model → render a swimlane → human review.
+Two stages in one Streamlit app:
+
+- **Stage 1 · Current state** — ingest process materials (transcripts, docs) → a multi-agent extraction builds a
+  structured current-state model → a CGS-standard swimlane → human review (in the app or in draw.io).
+- **Phase 3 · Future state** — runs CGS's *Process Improvement Framework* (Parts 0–5) on the reviewed map and recommends
+  a future-state process: which steps to remove, combine or move, and whether each remaining step should be
+  **Rules**, an **Agent**, a **Human approval** or a **Human task**. Outputs a future-state diagram, a step table,
+  a summary with expected impact, and the top 10 follow-up questions.
 
 ## Run it
 
+Needs Python 3.11+. No API key needed for the demo.
+
 ```bash
-cd cgs-stage1
-python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+git clone https://github.com/harkiratsb/CGS-Compass-Agent.git
+cd CGS-Compass-Agent
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Opens at http://localhost:8501. Click **Load demo materials** → **Analyze process**.
+Then, in the browser (http://localhost:8501):
 
-### Live vs cached extraction
+1. Click **Load demo materials**, then **▶ Analyze process**.
+2. Switch to **Phase 3 · Future state** at the top and click **Run framework**.
 
-| | |
-|---|---|
-| `ANTHROPIC_API_KEY` set in `.env` | Live: Claude extracts the model from whatever you upload. Results are cached in `.cache/` by file hash. |
-| No key | Cached: the two demo transcripts resolve to `demo_data/extraction_sales_process.json`. Any other upload will show a clear error. |
+**Optional:** to run on your own files, copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`.
+Without a key, only the demo works (it replays recorded runs).
 
-Copy `.env.example` → `.env` to add a key. `Force live re-extraction` in the sidebar bypasses the cache.
+**Tests:** `pip install -r requirements-dev.txt && pytest -q`
+
+<details>
+<summary>More setup details</summary>
+
+- **Optional `.env` settings:** `CGS_MODEL` (default `claude-sonnet-5-5`), `CGS_REVIEW_MODEL` (default
+  `claude-opus-5-5`), and `GOOGLE_SERVICE_ACCOUNT_FILE` / `DRIVE_FOLDER_ID` for Google Drive import (see `ingest/drive.py`).
+- **PNG export** needs the Cairo library (`brew install cairo` / `apt install libcairo2`). SVG and draw.io exports work without it.
+- **Live runs** are cached in `.cache/`. A live Phase 3 run takes about 10 minutes.
+  `python scripts/phase3_live_check.py` compares a live run with CGS's worked example; `--record` refreshes the demo replay.
+- **Save project** / **Open project** keep your edits and answers between sessions.
+
+</details>
+
+## Phase 3 · How the framework runs
+
+The AI only **answers** the framework's judgment questions; plain code **decides**.
+
+- Each answer (R1–R7 "should it exist", D1–D3 standardization, six dials, the agent test, readiness) carries a quote, a
+  reason, an H/M/L confidence and a basis: **stated** (quoted from the materials), **assumed** (CGS's cautious default
+  when the materials don't say) or **answered** (a person, in the app). Missing evidence can only lower a score.
+- `framework/rules.py` applies every CGS rule — doc gate, calls, tiers, readiness, posture, waves — from
+  `framework/settings.toml`. CGS's thresholds are a first pass: change a number there and rerun, no prompt changes.
+- Every Stage 1 output feeds the AI as evidence: pain points, open questions, source disagreements, handoffs,
+  dependencies, tools, step sizing.
+- A second model verifies stated answers against their quotes; it can only downgrade.
+- Answers you give survive re-runs; the top 10 follow-ups are the ones whose answers could change a result (plus
+  volume, which the impact section needs).
+
+Method: `docs/cgs-framework-starter.md` · Design: `docs/superpowers/specs/2026-11-18-phase3-framework-design.md`.
 
 ## How it maps to the CGS framework
 
@@ -93,9 +130,9 @@ re-pointed or relabelled, tool tags removed or edited, notes edited. **Apply cha
 (and so the handoff JSON); the app then redraws the layout and connectors itself. Sticky notes, colours and connector
 bends drawn by hand are not read back. Both plain and compressed draw.io files are supported.
 
-## Data contract (Stage 1 → Stage 2)
+## Data contract (Stage 1 → Phase 3)
 
-`schema.py` is the contract. Stage 2 (analysis) consumes `ProcessModel` as-is:
+`schema.py` is the contract. Phase 3 consumes `ProcessModel` as-is:
 
 ```
 process, roles[], activities[] (role, order, kind, tools, assumptions, step_type, source_refs),
@@ -127,19 +164,33 @@ In the demo replay, sizing values and frequencies were filled in by hand from th
 ## Layout
 
 ```
-app.py                     Streamlit UI (intake → analyze → review tabs)
-schema.py                  pydantic data contract
-ingest/parse.py            md/txt/vtt/srt/docx/pdf → chunks with location tags
-ingest/extract.py          Claude call, JSON validation, retry, cache
-ingest/merge.py            cross-source dedupe + source-coverage counts
-render/swimlane.py         ProcessModel → layout + connector routing → SVG swimlane (+ PNG via cairosvg)
-render/drawio.py           same diagram as an editable draw.io file (Lucidchart import) + Open-in-draw.io link
-ingest/drawio_import.py    edited draw.io file → change list → updated ProcessModel
+app.py                     Streamlit UI: Stage 1 tabs + view switch to Phase 3
+phase3_ui.py               Phase 3 screens (run, gate & context, steps, follow-ups, future state)
+project.py                 save / open a project file (materials, model, runs, answers)
+intake.py                  default intake values
+schema.py                  pydantic data contract (Stage 1 → Phase 3)
+ingest/                    parsing, extraction agent, merge, Drive import, draw.io re-import
+render/swimlane.py         ProcessModel → SVG swimlane (+ PNG via cairosvg), step-type markers
+render/drawio.py           same diagram as an editable draw.io file (Lucidchart import)
+framework/settings.toml    every CGS threshold and band
+framework/rules.py         all CGS rules (Parts 0–5), answering follow-ups, rescoring
+framework/agent.py         Phase 3 AI steps, prompts, cache and replay
+framework/followups.py     ranks the top 10 follow-up questions
+framework/future.py        step table → future-state process model
+framework/impact.py        expected impact (minutes saved, hours a month, roles freed)
+framework/outputs.py       step table CSV/JSON, summary and follow-up Markdown
 cgs_tools.py               CGS tool list + tool-name → TL-xx tag resolution
-handoff.py                 ProcessModel → pain-point handoff JSON (cgs.compass.painpoints/v0.2) + checks
-demo_data/                 two CGS sales-process transcripts + cached extraction
+handoff.py                 pain-point handoff JSON (cgs.compass.painpoints/v0.2) + name scrubbing
+scripts/phase3_live_check.py  live Phase 3 run on the demo, agreement report, --record
+demo_data/                 two sales-process transcripts + recorded Stage 1 and Phase 3 runs
+tests/                     pytest suite
 ```
 
 ## Not in this build (next steps)
 
-Google Drive picker (OAuth), audio transcription (bring transcripts as text), Stakeholder Consensus agent, multi-process, Stage 2 analysis.
+- Tune the Phase 3 prompts: the recorded live run reaches 6 of CGS's 8 worked-example verdicts.
+- Phase 3 boxes the framework doesn't cover yet: Minimum Viable Human Organization, Orchestrator, naming APIs and
+  sub-agents per agent step.
+- Phase 1 gaps: audio/video transcription (bring transcripts as text), Stakeholder Consensus agent, Obsidian / past
+  deliverables ingestion, Google Drive picker (OAuth).
+- Multi-process runs.
