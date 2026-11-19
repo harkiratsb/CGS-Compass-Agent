@@ -1,0 +1,438 @@
+{
+  "gate": {
+    "answers": {
+      "3": {
+        "value": "Y",
+        "basis": "stated",
+        "reason": "Every task is a verb plus a noun",
+        "confidence": "H",
+        "quotes": [
+          {
+            "file": "map",
+            "location": "A1",
+            "quote": "Identify lead"
+          }
+        ]
+      },
+      "8": {
+        "value": "Partly",
+        "basis": "assumed",
+        "reason": "Some steps have only a name",
+        "confidence": "M",
+        "quotes": []
+      }
+    }
+  },
+  "context": {
+    "context": {
+      "outcome": {
+        "value": "A qualified lead becomes a signed engagement",
+        "basis": "stated",
+        "reason": "Workshop opening",
+        "confidence": "M",
+        "quotes": [
+          {
+            "file": "sales_process_mapping_transcript.md",
+            "location": "00:01:00",
+            "quote": "get a lead to a signed engagement"
+          }
+        ]
+      },
+      "volume": {
+        "value": "About 10 leads a month",
+        "basis": "assumed",
+        "reason": "Not stated",
+        "confidence": "L",
+        "quotes": []
+      }
+    },
+    "map_checks": [
+      {
+        "type": "duplicate_gate",
+        "step_ids": [
+          "D1"
+        ],
+        "question": "Is the Insightly access check repeated at three points?"
+      },
+      {
+        "type": "not_a_type",
+        "step_ids": [
+          "A1"
+        ],
+        "question": "dropped"
+      },
+      {
+        "type": "dead_end",
+        "step_ids": [
+          "ZZ9"
+        ],
+        "question": "dropped: unknown step"
+      }
+    ],
+    "worksheet": {
+      "A2": {
+        "channel": {
+          "value": "Insightly web form",
+          "basis": "assumed",
+          "reason": "",
+          "confidence": "L",
+          "quotes": []
+        },
+        "type_today": {
+          "value": "Robot",
+          "basis": "stated",
+          "confidence": "H",
+          "quotes": [
+            {
+              "file": "f",
+              "location": "1",
+              "quote": "q"
+            }
+          ]
+        }
+      },
+      "ZZ9": {
+        "channel": {
+          "value": "x",
+          "basis": "assumed"
+        }
+      }
+    }
+  },
+  "part2": {
+    "steps": {
+      "D1": {
+        "R2": {
+          "value": "Y",
+          "basis": "stated",
+          "reason": "Exists only because seats are limited",
+          "confidence": "H",
+          "quotes": [
+            {
+              "file": "sales_process_mapping_transcript.md",
+              "location": "00:53:53",
+              "quote": "do you have insightly access?"
+            }
+          ]
+        }
+      },
+      "A2": {
+        "R1": {
+          "value": "Probably",
+          "basis": "stated",
+          "quotes": []
+        },
+        "R3": {
+          "value": "N",
+          "basis": "stated",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "sales_process_walkthrough_jordyn.md",
+              "location": "00:01:42",
+              "quote": "enter the lead"
+            }
+          ]
+        },
+        "accountability": {
+          "value": "N",
+          "basis": "assumed"
+        }
+      },
+      "A6": {
+        "R6": {
+          "value": "Y",
+          "basis": "stated",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "sales_process_mapping_transcript.md",
+              "location": "00:27:53",
+              "quote": "BCC the Insightly address"
+            }
+          ]
+        },
+        "combine_with": {
+          "value": "NOPE",
+          "basis": "assumed"
+        }
+      },
+      "ZZ9": {
+        "R1": {
+          "value": "Y",
+          "basis": "stated",
+          "quotes": [
+            {
+              "file": "f",
+              "location": "1",
+              "quote": "q"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "part2_context": {
+    "steps": {
+      "A7": {
+        "R4": {
+          "value": "N",
+          "basis": "stated",
+          "reason": "Outreach is active work",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "sales_process_mapping_transcript.md",
+              "location": "00:29:35",
+              "quote": "sent her now 10 emails"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "tiers": {
+    "steps": {
+      "A2": {
+        "D1": {
+          "value": "Y",
+          "basis": "stated",
+          "confidence": "H",
+          "quotes": [
+            {
+              "file": "f",
+              "location": "1",
+              "quote": "in Insightly"
+            }
+          ]
+        },
+        "D2": {
+          "value": "Partly",
+          "basis": "assumed"
+        },
+        "rule_clarity": {
+          "value": 4,
+          "basis": "stated",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "f",
+              "location": "1",
+              "quote": "fields"
+            }
+          ]
+        },
+        "A1": {
+          "value": "maybe",
+          "basis": "assumed"
+        }
+      },
+      "A6": {
+        "stakes": {
+          "value": 4,
+          "basis": "stated",
+          "confidence": "H",
+          "quotes": [
+            {
+              "file": "sales_process_mapping_transcript.md",
+              "location": "00:27:53",
+              "quote": "lost from the record"
+            }
+          ]
+        },
+        "judgment": {
+          "value": "3",
+          "basis": "assumed"
+        }
+      },
+      "ZZ9": {
+        "stakes": {
+          "value": 5,
+          "basis": "assumed"
+        }
+      },
+      "A7": {
+        "A1": {
+          "value": "Y",
+          "basis": "stated",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "sales_process_mapping_transcript.md",
+              "location": "00:29:35",
+              "quote": "sent her now 10 emails"
+            }
+          ]
+        },
+        "A4": {
+          "value": "Y",
+          "basis": "stated",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "sales_process_mapping_transcript.md",
+              "location": "00:29:35",
+              "quote": "sent her now 10 emails"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "loop": {
+    "steps": {
+      "A2": {
+        "R6": {
+          "value": "N",
+          "basis": "stated",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "f",
+              "location": "1",
+              "quote": "separate role"
+            }
+          ]
+        }
+      }
+    },
+    "made_unnecessary_by": {
+      "A3": "A7",
+      "ZZ9": "A6"
+    }
+  },
+  "readiness": {
+    "defaults": {
+      "governance": {
+        "value": 2,
+        "basis": "stated",
+        "confidence": "M",
+        "quotes": [
+          {
+            "file": "sales_process_mapping_transcript.md",
+            "location": "00:20:42",
+            "quote": "who approves reassignment"
+          }
+        ]
+      },
+      "people": {
+        "value": 9,
+        "basis": "stated",
+        "quotes": [
+          {
+            "file": "f",
+            "location": "1",
+            "quote": "q"
+          }
+        ]
+      }
+    },
+    "steps": {
+      "A2": {
+        "data_systems": {
+          "value": 3,
+          "basis": "stated",
+          "confidence": "M",
+          "quotes": [
+            {
+              "file": "f",
+              "location": "1",
+              "quote": "Insightly"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "verify": {
+    "findings": [
+      {
+        "path": "steps.A6.dials.stakes",
+        "action": "downgrade",
+        "reason": "The quote does not show stakes"
+      },
+      {
+        "path": "steps.A2.r_pass1.R3",
+        "action": "lower_confidence",
+        "reason": "Weak quote"
+      },
+      {
+        "path": "steps.ZZ9.dials.stakes",
+        "action": "downgrade",
+        "reason": "unknown step"
+      },
+      {
+        "path": "doc_gate.3",
+        "action": "raise",
+        "reason": "not allowed"
+      }
+    ]
+  },
+  "specs": {
+    "steps": {
+      "A2": {
+        "chain": [
+          {
+            "name": "Robot step",
+            "type": "Robot"
+          }
+        ],
+        "specs": [
+          {
+            "type": "Rules",
+            "owner": "Director of Operations"
+          },
+          {
+            "type": "Agent",
+            "goal": "dropped: not in the chain"
+          }
+        ]
+      },
+      "ZZ9": {
+        "chain": [],
+        "specs": []
+      },
+      "A7": {
+        "chain": [
+          {
+            "name": "Draft outreach email",
+            "type": "Agent",
+            "role_id": "R3"
+          },
+          {
+            "name": "Approve outreach email",
+            "type": "Human approval",
+            "role_id": "R3"
+          },
+          {
+            "name": "Log contact",
+            "type": "Human task",
+            "role_id": "NOPE"
+          }
+        ],
+        "specs": [
+          {
+            "type": "Agent",
+            "goal": "Draft follow-up"
+          },
+          {
+            "type": "Human approval",
+            "authority": "Lead Owner"
+          },
+          {
+            "type": "Human task",
+            "what": "Log the contact"
+          }
+        ]
+      }
+    }
+  },
+  "summary": {
+    "summary_text": "The sales process turns a lead into a signed engagement. Documentation confidence is High.",
+    "first_actions": [
+      "Remove the Insightly access check",
+      "Write the SOP for lead entry",
+      "Confirm who approves reassignment"
+    ]
+  }
+}

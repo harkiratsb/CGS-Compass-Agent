@@ -1,0 +1,36 @@
+[gate]
+high = 7.0
+medium = 4.0
+
+[redesign]
+# lower bounds (percent of non-Keep steps) for scores 2, 3, 4, 5
+bands = [10, 25, 40, 60]
+
+[defaults]
+dial = 3
+rule_clarity = 1
+readiness = 1
+
+[tier.rules]          # rule 2
+clarity_min = 4
+input_min = 4
+variation_max = 2
+judgment_max = 2
+
+[tier.agent]          # rule 3
+checkability_min = 3
+judgment_min = 3
+input_max = 2
+variation_min = 3
+approval_stakes_min = 3
+
+[tier.human]          # rules 1 and 4
+stakes = 5
+judgment_min = 3
+checkability_max = 2
+
+[readiness]
+ready_min = 4
+
+[loop]
+extra_passes = 1

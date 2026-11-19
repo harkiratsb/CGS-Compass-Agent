@@ -1,0 +1,756 @@
+{
+  "steps.D1.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The access check exists only because a lead identifier may lack an Insightly seat",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "might not actually have a seat or access edit access specifically"
+      }
+    ]
+  },
+  "steps.D5.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The second access check exists only because the opportunity lead may lack an Insightly seat",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:07:19",
+        "quote": "circle back to whether or not we have insightly access"
+      }
+    ]
+  },
+  "steps.D8.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The third access check on closing exists only because of the same seat limit; the team confirmed it applies again",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_mapping_transcript.md",
+        "location": "00:53:53",
+        "quote": "do we also have to do the whole do you have insightly access?"
+      }
+    ]
+  },
+  "steps.A3.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The request for lead entry exists only because the lead identifier has no Insightly seat",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "ask for assistance to add the lead's contact information"
+      }
+    ]
+  },
+  "steps.A4.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Entry by the Director of Operations or a delegate is done on someone else's behalf, only because of the seat limit",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "occasionally a delegate for inputting information into sightly"
+      }
+    ]
+  },
+  "steps.A13.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The conversion request exists only because the lead owner has no Insightly seat",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:07:19",
+        "quote": "we request assistance in converting that lead to an opportunity"
+      }
+    ]
+  },
+  "steps.A14.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Conversion by another role is done for the lead owner, only because of the seat limit",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:07:19",
+        "quote": "someone else has converted that lead for us"
+      }
+    ]
+  },
+  "steps.A23.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The closure request exists only because the opportunity owner has no seat to close it",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_mapping_transcript.md",
+        "location": "00:53:53",
+        "quote": "do we also have to do the whole do you have insightly access?"
+      }
+    ]
+  },
+  "steps.A24.r_pass1.R2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Closing and reverting to a contact is done by a seat holder for another role, only because of the seat limit",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:11:00",
+        "quote": "marked as closed and reverted to a contact and insightly"
+      }
+    ]
+  },
+  "steps.A2.r_pass1.R1": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "The lead record is the starting point of the process, so the outcome is not reached without this entry",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.r_pass1.R2": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Not an access workaround: a seat holder enters the lead in their own right",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.r_pass1.R3": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "It is the first capture of the lead, not a re-key of existing information",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.r_pass1.R4": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Entering a record is an action, with no waiting in the step",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.r_pass1.R5": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "It does not correct an earlier error; it records a newly identified lead",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.r_pass1.R6": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "The company record is created inside this step, so nothing adjacent to merge",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_mapping_transcript.md",
+        "location": "00:20:42",
+        "quote": "adding lead to insightly also includes ensuring company has added"
+      }
+    ]
+  },
+  "steps.A2.r_pass1.R7": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "One action on one record; the map draws a single task here",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.tier1.D1": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The lead goes into Insightly, a digital CRM",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.tier1.D2": {
+    "value": "Partly",
+    "basis": "stated",
+    "reason": "Only partly written: the company-record rule was stated in discussion, not as a documented procedure",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_mapping_transcript.md",
+        "location": "00:20:42",
+        "quote": "adding lead to insightly also includes ensuring company has added"
+      }
+    ]
+  },
+  "steps.A2.tier1.D3": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The lead data goes into named Insightly contact and company fields",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.dials.rule_clarity": {
+    "value": 4,
+    "basis": "stated",
+    "reason": "Clear rule: contact details go into the Insightly lead fields, creating the company first if missing",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_mapping_transcript.md",
+        "location": "00:20:42",
+        "quote": "adding lead to insightly also includes ensuring company has added"
+      }
+    ]
+  },
+  "steps.A2.dials.input_structure": {
+    "value": 4,
+    "basis": "stated",
+    "reason": "Inputs are structured contact details with set CRM fields",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.dials.variation": {
+    "value": 2,
+    "basis": "stated",
+    "reason": "Little variation: same entry for every lead, with an occasional new company record",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_mapping_transcript.md",
+        "location": "00:20:42",
+        "quote": "adding lead to insightly also includes ensuring company has added"
+      }
+    ]
+  },
+  "steps.A2.dials.judgment": {
+    "value": 1,
+    "basis": "stated",
+    "reason": "No judgment: the person copies what is known about the lead",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.dials.checkability": {
+    "value": 5,
+    "basis": "stated",
+    "reason": "Easy to check at a glance by opening the Insightly record",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.dials.stakes": {
+    "value": 2,
+    "basis": "stated",
+    "reason": "Low stakes: a wrong field is fixed later with little client impact",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:01:42",
+        "quote": "input that lead's contact information into insightly"
+      }
+    ]
+  },
+  "steps.A2.readiness.bus_factor": {
+    "value": 2,
+    "basis": "stated",
+    "reason": "Two roles can do this work: the lead owner or the Director of Operations",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "that would be the director of operations"
+      }
+    ]
+  },
+  "steps.A6.r_pass1.R1": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Outreach is how the lead turns into a conversation, so the outcome needs it",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.r_pass1.R2": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Not an access workaround: the lead owner contacts the lead directly",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.r_pass1.R3": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "The message is newly written to the lead, not re-keyed information",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.r_pass1.R4": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Outreach is active contact, not waiting on someone",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.r_pass1.R5": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "It does not fix an earlier problem; it starts the conversation",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.r_pass1.R6": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Adjacent steps are by different roles or decisions, so none to merge",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.r_pass1.R7": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "One action, contact the lead, drawn as one step",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.tier1.D1": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Outreach is sent by email and logged in Insightly",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.tier1.D2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "A sales play exists for each service line to follow",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.tier1.D3": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The lead details and play are findable in Insightly",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.dials.rule_clarity": {
+    "value": 2,
+    "basis": "stated",
+    "reason": "Only a loose rule: connect the services to the lead's situation",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.dials.input_structure": {
+    "value": 2,
+    "basis": "stated",
+    "reason": "Inputs are free-text lead context, not structured fields",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.dials.variation": {
+    "value": 3,
+    "basis": "stated",
+    "reason": "The reason to connect differs by lead and service line",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.dials.judgment": {
+    "value": 3,
+    "basis": "stated",
+    "reason": "Choosing the angle for each lead takes moderate judgment",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.dials.checkability": {
+    "value": 4,
+    "basis": "stated",
+    "reason": "A person can read a drafted message before it goes out",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.dials.stakes": {
+    "value": 3,
+    "basis": "stated",
+    "reason": "Moderate stakes: first impression with a prospective client",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A6.agent_test.A1": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Drafting the message needs free text and lead context",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.agent_test.A2": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "No: rules alone would not cover the variation between leads",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.agent_test.A3": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "No: rules would not give about 80% of the gain on a free-text message",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "make some sort of connection between the services that CGS provides"
+      }
+    ]
+  },
+  "steps.A6.agent_test.A4": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Yes: drafting saves real time on every outreach cycle",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:02:57",
+        "quote": "you're going to contact the lead"
+      }
+    ]
+  },
+  "steps.A11.r_pass1.R1": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "The meeting is where the interest is gauged, so the outcome needs it",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.r_pass1.R2": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Not an access workaround: the lead owner meets the lead directly",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.r_pass1.R3": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "Notes capture new information from the meeting, not a re-key",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.r_pass1.R4": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "The meeting is live engagement, not waiting",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.r_pass1.R5": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "It does not fix an earlier problem; it is the first conversation",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.r_pass1.R6": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "The adjacent steps are decisions or scheduling, so nothing to merge",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.r_pass1.R7": {
+    "value": "N",
+    "basis": "stated",
+    "reason": "One meeting drawn as one step",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.accountability": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The relationship with the lead is owned by this role, so the step stays with a person",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  },
+  "steps.A11.tier1.D1": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Meeting notes or a transcript are kept digitally",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "within that meeting you transcribe if possible"
+      }
+    ]
+  },
+  "steps.A11.tier1.D2": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "The rule is stated: transcribe, or take notes if you cannot",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "make sure you're taking notes"
+      }
+    ]
+  },
+  "steps.A11.tier1.D3": {
+    "value": "Y",
+    "basis": "stated",
+    "reason": "Notes and transcripts are findable on the lead record",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "within that meeting you transcribe if possible"
+      }
+    ]
+  },
+  "steps.A11.dials.stakes": {
+    "value": 5,
+    "basis": "stated",
+    "reason": "Highest stakes: this is the first live client conversation and the relationship rides on it",
+    "confidence": "M",
+    "quotes": [
+      {
+        "file": "sales_process_walkthrough_jordyn.md",
+        "location": "00:05:35",
+        "quote": "really get a gauge on the interest from the lead"
+      }
+    ]
+  }
+}

@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 # load .env if present (no dependency on python-dotenv)
 _env = Path(__file__).with_name(".env")
@@ -25,6 +24,7 @@ if _env.exists():
 
 from schema import ProcessModel                       # noqa: E402
 from ingest.parse import parse_file                   # noqa: E402
+from project import ProjectError, load_project, parsed_files, save_project  # noqa: E402
 from ingest import drive                              # noqa: E402
 from ingest.agent import run_agent                   # noqa: E402
 from ingest.merge import dedupe_activities, source_coverage  # noqa: E402
@@ -33,6 +33,9 @@ from render.drawio import drawio_url, render_drawio    # noqa: E402
 from ingest.drawio_import import import_drawio        # noqa: E402
 from cgs_tools import tags_for                        # noqa: E402
 from handoff import build_handoff, check_handoff, speaker_names, with_nicknames  # noqa: E402
+from framework.models import FrameworkRun                # noqa: E402
+from phase3_ui import render_phase3                      # noqa: E402
+from intake import INTAKE_DEFAULTS                       # noqa: E402
 
 ORANGE = "#FF6428"
 DEMO_DIR = Path(__file__).with_name("demo_data")
@@ -68,20 +71,58 @@ ss.setdefault("model", None)
 ss.setdefault("mode", None)
 ss.setdefault("run", None)
 ss.setdefault("drive_files", [])
+ss.setdefault("map_reviewed", False)
+# from map_reviewed, so the toggle comes back right after the Stage 1 tabs were not drawn (Phase 3 view)
+ss.setdefault("map_reviewed_toggle", ss.map_reviewed)
+ss.setdefault("framework", None)
+if ss.pop("_reset_reviewed", False):   # the map changed after the toggle was drawn
+    ss.map_reviewed = ss["map_reviewed_toggle"] = False
+
+
+def _reset_review_state():
+    ss.run, ss.framework, ss.map_reviewed = None, None, False
+    ss["map_reviewed_toggle"] = False
+
+for _k, _v in INTAKE_DEFAULTS.items():
+    ss.setdefault(_k, _v)
+DEFINITION_STATUSES = ["draft", "reviewed", "approved"]
+ss.setdefault("definition_status", "draft")
+INTAKE_KEYS = ["process_name", "process_owner", "process_scope", "account_id", "process_id",
+               "function_ref", "definition_status", "extra_names"]
 
 # ---------------------------------------------------------------- sidebar: intake
 with st.sidebar:
+    with st.expander("Open project"):
+        proj_up = st.file_uploader("Open a saved project (.json)", type=["json"], key="project_upload")
+        if proj_up is not None and ss.get("_opened_project") != (proj_up.name, proj_up.size):
+            try:
+                proj, proj_files = load_project(proj_up.getvalue().decode("utf-8"))
+            except (ProjectError, UnicodeDecodeError) as e:
+                st.error(str(e) if isinstance(e, ProjectError) else "This file is not a valid project file.")
+            else:
+                ss._opened_project = (proj_up.name, proj_up.size)
+                ss.files, ss.parsed = proj_files, parsed_files(proj_files)
+                ss.model, ss.run, ss.mode = proj.model, proj.run, proj.mode
+                ss.map_reviewed = ss["map_reviewed_toggle"] = proj.map_reviewed
+                try:
+                    ss.framework = FrameworkRun.model_validate(proj.framework) if proj.framework else None
+                except ValueError:
+                    ss.framework = None
+                    st.warning("The saved framework run couldn't be read; run the framework again.")
+                for k in INTAKE_KEYS:
+                    if k in proj.intake and (k != "definition_status" or proj.intake[k] in DEFINITION_STATUSES):
+                        ss[k] = proj.intake[k]
+                st.success(f"Opened project ({len(proj_files)} file(s)).")
     st.subheader("1 · Process intake")
-    process_name = st.text_input("Process name", value="CGS Lead & Opportunity Management")
-    process_owner = st.text_input("Process owner", value="Director of Operations")
-    process_scope = st.text_area("Scope / context for the agent", height=80,
-                                 value="Lead identification through alignment on a discussion document. Proposal/SOW is a separate process.")
+    process_name = st.text_input("Process name", key="process_name")
+    process_owner = st.text_input("Process owner", key="process_owner")
+    process_scope = st.text_area("Scope / context for the agent", height=80, key="process_scope")
     with st.expander("Handoff details (for opportunity mapping)"):
-        account_id = st.text_input("Account ID", value="ACC-0001")
-        process_id = st.text_input("Process ID", value="P-01")
-        function_ref = st.text_input("Function ref", value="", help="CGS function reference, e.g. 3.1")
-        definition_status = st.selectbox("Definition status", ["draft", "reviewed", "approved"])
-        extra_names = st.text_input("Other names to remove", value="",
+        account_id = st.text_input("Account ID", key="account_id")
+        process_id = st.text_input("Process ID", key="process_id")
+        function_ref = st.text_input("Function ref", key="function_ref", help="CGS function reference, e.g. 3.1")
+        definition_status = st.selectbox("Definition status", key="definition_status", options=DEFINITION_STATUSES)
+        extra_names = st.text_input("Other names to remove", key="extra_names",
                                     help="People mentioned in the materials who are not speakers. Speaker names are "
                                          "removed automatically; these are replaced with [team member] too.")
     st.subheader("2 · Process materials")
@@ -90,7 +131,7 @@ with st.sidebar:
         if drive.available():
             folder_id = st.text_input("Drive folder ID", value=os.environ.get("DRIVE_FOLDER_ID", ""),
                                       help="The part of the folder URL after /folders/. Share the folder with the service-account email first.")
-            if st.button("Browse folder", use_container_width=True, disabled=not folder_id):
+            if st.button("Browse folder", width="stretch", disabled=not folder_id):
                 try:
                     ss.drive_files = drive.list_folder(folder_id)
                     if not ss.drive_files:
@@ -100,11 +141,12 @@ with st.sidebar:
             if ss.get("drive_files"):
                 chosen = st.multiselect("Select materials", options=[f["name"] for f in ss.drive_files],
                                         default=[f["name"] for f in ss.drive_files])
-                if st.button("Import selected from Drive", use_container_width=True, disabled=not chosen):
+                if st.button("Import selected from Drive", width="stretch", disabled=not chosen):
                     picked = [f for f in ss.drive_files if f["name"] in chosen]
                     with st.spinner("Pulling files from Drive…"):
                         ss.files = [drive.fetch(f) for f in picked]
                     ss.model, ss.parsed = None, []
+                    _reset_review_state()
                     st.success(f"Imported {len(ss.files)} file(s)")
         else:
             st.caption("Drive import not configured — add `service_account.json` next to app.py "
@@ -114,13 +156,18 @@ with st.sidebar:
                                    type=["md", "txt", "vtt", "srt", "docx", "pdf"],
                                    accept_multiple_files=True)
     c1, c2 = st.columns(2)
-    if c1.button("Load demo materials", use_container_width=True):
+    if c1.button("Load demo materials", width="stretch"):
         ss.files = [(p.name, p.read_bytes()) for p in sorted(DEMO_DIR.glob("*.md"))]
-        ss.model, ss.parsed = None, []
-    if c2.button("Clear", use_container_width=True):
+        ss.model, ss.parsed, ss.mode = None, [], None
+        _reset_review_state()
+    if c2.button("Clear", width="stretch"):
         ss.files, ss.parsed, ss.model, ss.mode = [], [], None, None
-    if uploads:
+        _reset_review_state()
+    # only take the uploader's files when its contents change, so an opened project isn't overwritten
+    uploads_sig = tuple((u.name, u.size) for u in uploads or [])
+    if uploads and uploads_sig != ss.get("_uploads_sig"):
         ss.files = [(u.name, u.getvalue()) for u in uploads]
+    ss._uploads_sig = uploads_sig
     if ss.files:
         st.caption("Selected:")
         for n, b in ss.files:
@@ -129,13 +176,15 @@ with st.sidebar:
     key_present = bool(os.environ.get("ANTHROPIC_API_KEY"))
     st.caption(("🟢 Live extraction available" if key_present else "🟡 No API key — cached extraction only"))
     force_live = st.checkbox("Run agent live (ignore cache / replay)", value=False, disabled=not key_present)
-    run = st.button("▶ Analyze process", type="primary", use_container_width=True, disabled=not ss.files)
+    run = st.button("▶ Analyze process", type="primary", width="stretch", disabled=not ss.files)
 
 # ---------------------------------------------------------------- pipeline
 STEP_ICON = {"code": "⚙️", "llm": "🤖"}
 
 if run:
     ss.model, ss.run = None, None
+    ss.map_reviewed, ss.framework = False, None
+    ss["map_reviewed_toggle"] = False
     with st.status("Running Stage 1 agent…", expanded=True) as status:
         st.write("⚙️ **Parse** — splitting files into chunks with source references")
         ss.parsed = [parse_file(n, b) for n, b in ss.files]
@@ -173,8 +222,24 @@ st.markdown(f"<span class='mode'>agent: {ss.mode}</span>&nbsp; "
             f"<span class='mode'>{sum(1 for v in cov.values() if v>=2)} steps corroborated by 2+ sources</span>",
             unsafe_allow_html=True)
 
-tab_agent, tab_src, tab_model, tab_swim, tab_pain, tab_json = st.tabs(
-    ["🤖 Agent run", "📄 Sources", "🧩 Process model", "🏊 Swimlane", "⚠️ Pain points & open items", "{ } Data contract"])
+# names to keep out of every output (speaker labels + names typed in the intake), as the handoff does
+names = speaker_names(ss.files) + with_nicknames([n.strip() for n in extra_names.split(",") if n.strip()])
+
+VIEW_STAGE1, VIEW_PHASE3 = "Stage 1 · Current state", "Phase 3 · Future state"
+ss.setdefault("view", VIEW_STAGE1)
+view = st.segmented_control("View", [VIEW_STAGE1, VIEW_PHASE3], key="view", label_visibility="collapsed")
+def _project_json() -> str:
+    fw = ss.framework
+    return save_project(ss.files, {k: ss.get(k, "") for k in INTAKE_KEYS}, model, ss.run, ss.mode,
+                        ss.map_reviewed, fw.model_dump() if hasattr(fw, "model_dump") else fw)
+
+
+if view == VIEW_PHASE3:
+    render_phase3(model, names, save=_project_json)
+    st.stop()
+
+tab_swim, tab_model, tab_pain, tab_json, tab_src, tab_agent = st.tabs(
+    ["🏊 Swimlane", "🧩 Process model", "⚠️ Pain points & open items", "{ } Data contract", "📄 Sources", "🤖 Agent run"])
 
 # ---------------------------------------------------------------- agent run
 KIND_BADGE = {"merged": "🔗 merged", "conflict": "⚖️ conflict", "single-source": "1️⃣ single-source",
@@ -206,124 +271,128 @@ def mini_svg(model, title):
 
 with tab_agent:
     ar = ss.run
-    if ar.mode == "replay":
-        st.info("**Replay** of a pre-computed agent run for the demo transcripts (no live API call). "
-                "With an API key, tick *Run agent live* to execute these steps on any materials.")
-    top1, top2 = st.columns([3, 1])
-    top1.markdown("##### Agent trace")
-    top2.download_button("⬇ Download full run (JSON)", ar.model_dump_json(indent=2), file_name="agent_run.json",
-                         mime="application/json", use_container_width=True)
-    st.caption("Extractor, comparer, reconciler and reviser share one model; the **verifier runs on a different model**, "
-               "builds its checklist from the transcripts before seeing any map, and never edits the map itself.")
-    for stp in ar.steps:
-        icon = "⚠️" if stp.status != "ok" else STEP_ICON[stp.kind]
-        meta = " · ".join(x for x in [stp.agent, stp.model or "code", f"{stp.duration_s}s" if stp.duration_s else ""] if x)
-        st.markdown(f"{icon} **{stp.id} · {stp.name}** <span class='mode'>{meta}</span><br>"
-                    f"<span style='color:#4B5563'>{stp.summary}</span>", unsafe_allow_html=True)
-        if stp.artifact:
-            json_panel(ar, stp.artifact)
+    if ar is None:
+        st.info("No Stage 1 agent run in this session (the project was saved without one). "
+                "Click **Analyze process** to run the agent.")
+    else:
+        if ar.mode == "replay":
+            st.info("**Replay** of a pre-computed agent run for the demo transcripts (no live API call). "
+                    "With an API key, tick *Run agent live* to execute these steps on any materials.")
+        top1, top2 = st.columns([3, 1])
+        top1.markdown("##### Agent trace")
+        top2.download_button("⬇ Download full run (JSON)", ar.model_dump_json(indent=2), file_name="agent_run.json",
+                             mime="application/json", width="stretch")
+        st.caption("Extractor, comparer, reconciler and reviser share one model; the **verifier runs on a different model**, "
+                   "builds its checklist from the transcripts before seeing any map, and never edits the map itself.")
+        for stp in ar.steps:
+            icon = "⚠️" if stp.status != "ok" else STEP_ICON[stp.kind]
+            meta = " · ".join(x for x in [stp.agent, stp.model or "code", f"{stp.duration_s}s" if stp.duration_s else ""] if x)
+            st.markdown(f"{icon} **{stp.id} · {stp.name}** <span class='mode'>{meta}</span><br>"
+                        f"<span style='color:#4B5563'>{stp.summary}</span>", unsafe_allow_html=True)
+            if stp.artifact:
+                json_panel(ar, stp.artifact)
 
-    # ---- 1. per-source
-    if ar.per_source:
-        st.divider()
-        st.markdown("##### 1 · Independent extraction per source")
-        st.caption("Each source is mapped on its own first, so the differences show up instead of being blended.")
-        cols = st.columns(len(ar.per_source))
-        for col, (name, pm) in zip(cols, ar.per_source.items()):
-            with col:
-                acts = len([a for a in pm.activities if a.kind not in ("start", "end")])
-                st.markdown(f"**{short(name)}**")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Activities", acts); m2.metric("Decisions", len(pm.decisions)); m3.metric("Pain points", len(pm.pain_points))
-        with st.expander("Compare per-source swimlanes"):
-            for name, pm in ar.per_source.items():
-                st.markdown(f"**{short(name)}**")
-                components.html(mini_svg(pm, f"From {short(name)} only"), height=330, scrolling=True)
+        # ---- 1. per-source
+        if ar.per_source:
+            st.divider()
+            st.markdown("##### 1 · Independent extraction per source")
+            st.caption("Each source is mapped on its own first, so the differences show up instead of being blended.")
+            cols = st.columns(len(ar.per_source))
+            for col, (name, pm) in zip(cols, ar.per_source.items()):
+                with col:
+                    acts = len([a for a in pm.activities if a.kind not in ("start", "end")])
+                    st.markdown(f"**{short(name)}**")
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Activities", acts); m2.metric("Decisions", len(pm.decisions)); m3.metric("Pain points", len(pm.pain_points))
+            with st.expander("Compare per-source swimlanes"):
+                for name, pm in ar.per_source.items():
+                    st.markdown(f"**{short(name)}**")
+                    st.iframe(mini_svg(pm, f"From {short(name)} only"), height=330)
 
-    # ---- 2. discrepancies
-    if ar.alignment or ar.discrepancies:
-        st.divider()
-        st.markdown("##### 2 · Discrepancies between sources")
-        if ar.alignment:
-            files = list(ar.per_source.keys())
-            rows = []
-            for a in ar.alignment:
-                row = {"step": a.step, "type": a.kind}
-                for f in files:
-                    row[short(f)] = "✓" if a.per_source.get(f) else "—"
-                rows.append(row)
-            cov_df = pd.DataFrame(rows)
-            gaps = cov_df[[short(f) for f in files]].eq("—").any(axis=1)
-            st.caption(f"Coverage matrix: {len(cov_df)} steps lined up across sources; "
-                       f"**{int(gaps.sum())} appear in only some sources** (highlighted).")
-            styled = cov_df.style.apply(lambda r: ["background-color:#FFF4E5" if gaps[r.name] else "" for _ in r], axis=1)
-            st.dataframe(styled, hide_index=True, use_container_width=True, height=min(420, 38 + 35 * len(cov_df)))
-        if ar.discrepancies:
-            sevs = {s: sum(d.severity == s for d in ar.discrepancies) for s in ("high", "medium", "low")}
-            st.caption(" · ".join(f"{SEV_BADGE[k]} {v}" for k, v in sevs.items() if v))
-            resolved_by = {}
+        # ---- 2. discrepancies
+        if ar.alignment or ar.discrepancies:
+            st.divider()
+            st.markdown("##### 2 · Discrepancies between sources")
+            if ar.alignment:
+                files = list(ar.per_source.keys())
+                rows = []
+                for a in ar.alignment:
+                    row = {"step": a.step, "type": a.kind}
+                    for f in files:
+                        row[short(f)] = "✓" if a.per_source.get(f) else "—"
+                    rows.append(row)
+                cov_df = pd.DataFrame(rows)
+                gaps = cov_df[[short(f) for f in files]].eq("—").any(axis=1)
+                st.caption(f"Coverage matrix: {len(cov_df)} steps lined up across sources; "
+                           f"**{int(gaps.sum())} appear in only some sources** (highlighted).")
+                styled = cov_df.style.apply(lambda r: ["background-color:#FFF4E5" if gaps[r.name] else "" for _ in r], axis=1)
+                st.dataframe(styled, hide_index=True, width="stretch", height=min(420, 38 + 35 * len(cov_df)))
+            if ar.discrepancies:
+                sevs = {s: sum(d.severity == s for d in ar.discrepancies) for s in ("high", "medium", "low")}
+                st.caption(" · ".join(f"{SEV_BADGE[k]} {v}" for k, v in sevs.items() if v))
+                resolved_by = {}
+                for r in ar.reconciliation:
+                    for i in r.discrepancy_ids:
+                        resolved_by[i] = r
+                for d in sorted(ar.discrepancies, key=lambda x: ("high", "medium", "low").index(x.severity)):
+                    st.markdown(f"<div style='background:{SEV_BG[d.severity]};padding:10px 14px;border-radius:8px;margin:6px 0'>"
+                                f"<b>{d.id} · {d.subject}</b> &nbsp;<span class='mode'>{SEV_BADGE[d.severity]}</span>"
+                                f" <span class='mode'>{DTYPE.get(d.type, d.type)}</span></div>", unsafe_allow_html=True)
+                    cols = st.columns(max(1, len(d.per_source)))
+                    for col, (f, said) in zip(cols, d.per_source.items()):
+                        col.markdown(f"**{short(f)}**  \n{said}")
+                    r = resolved_by.get(d.id)
+                    if r:
+                        st.markdown(f"↳ **Resolved ({KIND_BADGE[r.kind]}):** {r.resolution}")
+                    else:
+                        st.markdown("↳ ⚠️ *Not addressed by the reconciler*")
+                    for sr in d.sources:
+                        st.caption(f"{sr.file} @ {sr.location} — {sr.quote}")
+
+        # ---- 3. reconciliation
+        if ar.reconciliation:
+            st.divider()
+            st.markdown("##### 3 · Reconciliation — how the sources were combined")
+            kinds = {}
             for r in ar.reconciliation:
-                for i in r.discrepancy_ids:
-                    resolved_by[i] = r
-            for d in sorted(ar.discrepancies, key=lambda x: ("high", "medium", "low").index(x.severity)):
-                st.markdown(f"<div style='background:{SEV_BG[d.severity]};padding:10px 14px;border-radius:8px;margin:6px 0'>"
-                            f"<b>{d.id} · {d.subject}</b> &nbsp;<span class='mode'>{SEV_BADGE[d.severity]}</span>"
-                            f" <span class='mode'>{DTYPE.get(d.type, d.type)}</span></div>", unsafe_allow_html=True)
-                cols = st.columns(max(1, len(d.per_source)))
-                for col, (f, said) in zip(cols, d.per_source.items()):
-                    col.markdown(f"**{short(f)}**  \n{said}")
-                r = resolved_by.get(d.id)
-                if r:
-                    st.markdown(f"↳ **Resolved ({KIND_BADGE[r.kind]}):** {r.resolution}")
-                else:
-                    st.markdown("↳ ⚠️ *Not addressed by the reconciler*")
-                for sr in d.sources:
-                    st.caption(f"{sr.file} @ {sr.location} — {sr.quote}")
+                kinds[r.kind] = kinds.get(r.kind, 0) + 1
+            st.caption(" · ".join(f"{KIND_BADGE[k]} {v}" for k, v in kinds.items()))
+            order = {"conflict": 0, "single-source": 1, "renamed": 2, "excluded": 3, "merged": 4}
+            for r in sorted(ar.reconciliation, key=lambda x: order[x.kind]):
+                tag = f" (resolves {', '.join(r.discrepancy_ids)})" if r.discrepancy_ids else ""
+                with st.expander(f"{KIND_BADGE[r.kind]} — {r.subject}{tag}"):
+                    st.markdown(f"**What the sources said:** {r.detail}")
+                    st.markdown(f"**Resolution:** {r.resolution}")
+                    for sr in r.sources:
+                        st.markdown(f"↳ `{sr.file}` @ {sr.location} — *{sr.quote}*")
 
-    # ---- 3. reconciliation
-    if ar.reconciliation:
-        st.divider()
-        st.markdown("##### 3 · Reconciliation — how the sources were combined")
-        kinds = {}
-        for r in ar.reconciliation:
-            kinds[r.kind] = kinds.get(r.kind, 0) + 1
-        st.caption(" · ".join(f"{KIND_BADGE[k]} {v}" for k, v in kinds.items()))
-        order = {"conflict": 0, "single-source": 1, "renamed": 2, "excluded": 3, "merged": 4}
-        for r in sorted(ar.reconciliation, key=lambda x: order[x.kind]):
-            tag = f" (resolves {', '.join(r.discrepancy_ids)})" if r.discrepancy_ids else ""
-            with st.expander(f"{KIND_BADGE[r.kind]} — {r.subject}{tag}"):
-                st.markdown(f"**What the sources said:** {r.detail}")
-                st.markdown(f"**Resolution:** {r.resolution}")
-                for sr in r.sources:
-                    st.markdown(f"↳ `{sr.file}` @ {sr.location} — *{sr.quote}*")
-
-    # ---- 4. independent verification
-    if ar.checklist or ar.findings:
-        st.divider()
-        st.markdown("##### 4 · Independent verification")
-        st.caption("The verifier built this checklist from the transcripts **before** seeing the map, checked the map "
-                   "against it, and reported findings. A separate reviser applied or rejected each one.")
-        if ar.checklist:
-            flagged = {c for f in ar.findings for c in f.checklist_ids}
-            with st.expander(f"Verifier's blind checklist ({len(ar.checklist)} items)"):
-                st.dataframe(pd.DataFrame([{"id": c.id, "kind": c.kind, "item": c.description, "role": c.role,
-                                            "flagged": "⚑" if c.id in flagged else ""} for c in ar.checklist]),
-                             hide_index=True, use_container_width=True)
-        for rnd in sorted({f.round for f in ar.findings}):
-            st.markdown(f"**Round {rnd}**")
-            for f in [x for x in ar.findings if x.round == rnd]:
-                with st.container(border=True):
-                    st.markdown(f"{SEV_BADGE[f.severity]} · `{f.issue}` · **{f.id}** — {f.description}")
-                    c1, c2 = st.columns(2)
-                    c1.markdown(f"**Verifier suggests:** {f.fix}")
-                    c2.markdown(f"**Reviser:** {'✅ applied' if f.applied else '❌ rejected'} — {f.reviser_note}")
-                    refs = (f"checklist {', '.join(f.checklist_ids)} · " if f.checklist_ids else "")
-                    for sr in f.evidence:
-                        st.caption(f"{refs}{sr.file} @ {sr.location} — {sr.quote}")
-        if ar.draft is not None:
-            with st.expander("Before vs after verification"):
-                components.html(mini_svg(ar.draft, "Draft — before verification"), height=330, scrolling=True)
-                st.markdown("**Final:** see the Swimlane tab.")
+        # ---- 4. independent verification
+        if ar.checklist or ar.findings:
+            st.divider()
+            st.markdown("##### 4 · Independent verification")
+            st.caption("The verifier built this checklist from the transcripts **before** seeing the map, checked the map "
+                       "against it, and reported findings. A separate reviser applied or rejected each one.")
+            if ar.checklist:
+                flagged = {c for f in ar.findings for c in f.checklist_ids}
+                with st.expander(f"Verifier's blind checklist ({len(ar.checklist)} items)"):
+                    st.dataframe(pd.DataFrame([{"id": c.id, "kind": c.kind, "item": c.description, "role": c.role,
+                                                "flagged": "⚑" if c.id in flagged else ""} for c in ar.checklist]),
+                                 hide_index=True, width="stretch")
+            for rnd in sorted({f.round for f in ar.findings}):
+                st.markdown(f"**Round {rnd}**")
+                for f in [x for x in ar.findings if x.round == rnd]:
+                    with st.container(border=True):
+                        st.markdown(f"{SEV_BADGE[f.severity]} · `{f.issue}` · **{f.id}** — {f.description}")
+                        c1, c2 = st.columns(2)
+                        c1.markdown(f"**Verifier suggests:** {f.fix}")
+                        c2.markdown(f"**Reviser:** {'✅ applied' if f.applied else '❌ rejected'} — {f.reviser_note}")
+                        refs = (f"checklist {', '.join(f.checklist_ids)} · " if f.checklist_ids else "")
+                        for sr in f.evidence:
+                            st.caption(f"{refs}{sr.file} @ {sr.location} — {sr.quote}")
+            if ar.draft is not None:
+                with st.expander("Before vs after verification"):
+                    st.iframe(mini_svg(ar.draft, "Draft — before verification"), height=330)
+                    st.markdown("**Final:** see the Swimlane tab.")
 
 # ---------------------------------------------------------------- sources
 with tab_src:
@@ -342,7 +411,7 @@ with tab_model:
 
     st.markdown("##### Roles (swimlanes)")
     roles_df = pd.DataFrame([{"id": r.id, "name": r.name, "description": r.description, "external": r.is_external} for r in model.roles])
-    roles_edit = st.data_editor(roles_df, hide_index=True, use_container_width=True, key="roles_editor",
+    roles_edit = st.data_editor(roles_df, hide_index=True, width="stretch", key="roles_editor",
                                 column_config={"id": st.column_config.TextColumn(disabled=True)})
 
     st.markdown("##### Activities & decisions")
@@ -358,7 +427,7 @@ with tab_model:
                      "sources": cov.get(d.id, 0), "description": " / ".join(f"{b.label}→{b.next_id}" for b in d.branches)})
     df = pd.DataFrame(rows).sort_values(["order", "id"])
     edited = st.data_editor(
-        df, hide_index=True, use_container_width=True, height=520, key="nodes_editor",
+        df, hide_index=True, width="stretch", height=520, key="nodes_editor",
         column_config={
             "id": st.column_config.TextColumn(disabled=True, width="small"),
             "type": st.column_config.TextColumn(disabled=True, width="small"),
@@ -388,7 +457,7 @@ with tab_model:
                       "judgment reason stated": {True: "yes", False: "no"}.get(n.judgment_reason_stated, "")})
     basis_opts = ["stated", "estimated"]
     sized = st.data_editor(
-        pd.DataFrame(srows), hide_index=True, use_container_width=True, key="sizing_editor",
+        pd.DataFrame(srows), hide_index=True, width="stretch", key="sizing_editor",
         column_config={
             "id": st.column_config.TextColumn(disabled=True, width="small"),
             "step": st.column_config.TextColumn(disabled=True),
@@ -437,15 +506,16 @@ with tab_model:
             n.sizing_basis.human_minutes_per_cycle = r["minutes basis"] or "estimated"
             n.judgment_reason_stated = {"yes": True, "no": False}.get(r["judgment reason stated"])
         ss.model = model
+        ss.map_reviewed, ss._reset_reviewed = False, True
         st.success("Model updated — see the Swimlane tab.")
         st.rerun()
 
     with st.expander("Handoffs & dependencies"):
         st.dataframe(pd.DataFrame([{"from": role_names.get(h.from_role_id), "to": role_names.get(h.to_role_id),
                                     "at": h.at_node_id, "description": h.description} for h in model.handoffs]),
-                     hide_index=True, use_container_width=True)
+                     hide_index=True, width="stretch")
         st.dataframe(pd.DataFrame([{"node": d.node_id, "depends on": d.depends_on, "type": d.type} for d in model.dependencies]),
-                     hide_index=True, use_container_width=True)
+                     hide_index=True, width="stretch")
 
     with st.expander("Evidence — source references per step"):
         for a in model.activities:
@@ -468,27 +538,37 @@ with tab_swim:
     zoom = c2.slider("Zoom", 0.4, 1.6, 0.8, 0.05)
     geo = build_geometry(model, show_stickies=stickies, show_tools=tools_on)
     svg = render_svg(model, cov, overlay=overlay, geometry=geo)
-    components.html(
+    st.iframe(
         f"""<div style="overflow:auto;border:1px solid #E5E7EB;border-radius:8px;background:#fff;padding:8px">
               <div style="transform:scale({zoom});transform-origin:0 0;width:max-content">{svg}</div></div>""",
-        height=640, scrolling=True)
+        height=640)
     drawio_xml = render_drawio(model, geo)
     d1, d2, d4, d3 = st.columns(4)
-    d1.download_button("⬇ Download SVG", svg, file_name="current_state_swimlane.svg", mime="image/svg+xml", use_container_width=True)
+    d1.download_button("⬇ Download SVG", svg, file_name="current_state_swimlane.svg", mime="image/svg+xml", width="stretch")
     try:
-        d2.download_button("⬇ Download PNG", render_png(svg), file_name="current_state_swimlane.png", mime="image/png", use_container_width=True)
+        d2.download_button("⬇ Download PNG", render_png(svg), file_name="current_state_swimlane.png", mime="image/png", width="stretch")
     except Exception:  # cairosvg missing
         d2.caption("PNG export needs `cairosvg`")
     d4.download_button("⬇ Download draw.io (editable)", drawio_xml, file_name="current_state_swimlane.drawio",
-                       mime="application/xml", use_container_width=True,
+                       mime="application/xml", width="stretch",
                        help="Opens in draw.io, or in Lucidchart via File → Import → draw.io. Shapes, lanes and "
                             "connectors stay editable.")
     d3.download_button("⬇ Download model JSON", model.model_dump_json(indent=2), file_name="process_model.json",
-                       mime="application/json", use_container_width=True)
+                       mime="application/json", width="stretch")
+    s1, s2 = st.columns([1, 2])
+    ss.map_reviewed = s2.toggle("Mark map as reviewed", key="map_reviewed_toggle",
+                                help="Records that someone has checked this map against the source material.")
+    intake_now = {k: ss.get(k, "") for k in INTAKE_KEYS}
+    fw = ss.framework
+    s1.download_button("💾 Save project", save_project(
+        ss.files, intake_now, model, ss.run, ss.mode, ss.map_reviewed,
+        fw.model_dump() if hasattr(fw, "model_dump") else fw),
+        file_name="cgs_project.json", mime="application/json", width="stretch",
+        help="Saves the materials, the map, the agent run and your answers so you can pick up later.")
     # ---- edit in draw.io, then bring the edits back
     st.markdown("##### Edit in draw.io")
     e1, e2 = st.columns([1, 2])
-    e1.link_button("✏️ Open in draw.io", drawio_url(drawio_xml), use_container_width=True,
+    e1.link_button("✏️ Open in draw.io", drawio_url(drawio_xml), width="stretch",
                    help="Opens this diagram in draw.io in your browser. No account needed; the diagram travels in the "
                         "link itself and is not uploaded anywhere by the app.")
     e2.caption("1. **Open in draw.io** and edit: drag steps (or into another lane), rename, add or remove steps and "
@@ -511,6 +591,7 @@ with tab_swim:
                 if st.button("Apply changes to the model", type="primary",
                              disabled=res.changes == ["No changes found — the file matches the current model."]):
                     ss.model = res.model
+                    ss.map_reviewed, ss._reset_reviewed = False, True
                     st.success("Model updated from draw.io.")
                     st.rerun()
 
@@ -531,7 +612,7 @@ with tab_pain:
     st.markdown("##### Frequency (for the handoff)")
     fdf = pd.DataFrame([{"id": p.id, "pain point": p.description[:90], "frequency": p.frequency or "",
                          "basis": p.frequency_basis} for p in model.pain_points])
-    fed = st.data_editor(fdf, hide_index=True, use_container_width=True, key="freq_editor",
+    fed = st.data_editor(fdf, hide_index=True, width="stretch", key="freq_editor",
                          column_config={"id": st.column_config.TextColumn(disabled=True, width="small"),
                                         "pain point": st.column_config.TextColumn(disabled=True),
                                         "frequency": st.column_config.SelectboxColumn(
@@ -544,6 +625,7 @@ with tab_pain:
                     p.frequency = r["frequency"] or None
                     p.frequency_basis = r["basis"] or "estimated"
         ss.model = model
+        ss.map_reviewed, ss._reset_reviewed = False, True
         st.success("Saved.")
     if model.open_questions:
         st.markdown("##### Open questions for the process owner")
@@ -557,7 +639,6 @@ with tab_json:
         st.caption("This is the Stage 1 → Stage 2 data contract. Analysis (Stage 2) consumes exactly this structure.")
         st.json(json.loads(model.model_dump_json()), expanded=False)
     with j2:
-        names = speaker_names(ss.files) + with_nicknames([n.strip() for n in extra_names.split(",") if n.strip()])
         used = sorted({s.model for s in (ss.run.steps if ss.run else []) if s.model})
         h = build_handoff(model, account_id=account_id, process_id=process_id, function_ref=function_ref,
                           definition_status=definition_status, names=names, mode=ss.mode, models_used=used)

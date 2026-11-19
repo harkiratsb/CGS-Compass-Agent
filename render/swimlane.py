@@ -34,6 +34,7 @@ ORANGE = "#FF6428"
 INK = "#1F2328"
 GREY = "#6B7280"
 LANE_LINE = "#9CA3AF"
+REMOVED = "#9CA3AF"          # grey for steps marked removed in the future state
 STICKY = "#FFF3A3"
 STICKY_EDGE = "#E3C94C"
 TAG_EDGE = "#6B7280"
@@ -201,6 +202,26 @@ def _layout_slots(model: ProcessModel):
             for nid in ids:
                 slot[nid], col[nid] = s[nid], c
     return used_roles, slot, col, n_rows, len(orders)
+
+
+_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"     # no I or O (read as 1 and 0)
+
+
+def connector_letters():
+    """A, B, … Z, then AA, AB, … AZ, BA, … with no limit (I and O skipped throughout)."""
+    width = 1
+    while True:
+        idx = [0] * width
+        while True:
+            yield "".join(_LETTERS[i] for i in idx)
+            j = width - 1
+            while j >= 0 and idx[j] == len(_LETTERS) - 1:
+                idx[j] = 0
+                j -= 1
+            if j < 0:
+                break
+            idx[j] += 1
+        width += 1
 
 
 def build_geometry(model: ProcessModel, show_stickies: bool = True, title: Optional[str] = None,
@@ -502,7 +523,7 @@ def _route_all(model, nodes: Dict[str, NodeGeo], stickies: List[StickyGeo], lane
 
     # ---- lettered in-page connectors (backward jumps across lanes, very long loops, or unroutable)
     legend = []
-    letters = iter("ABCDEFGHJKLMNPQRSTUVWXYZ")
+    letters = connector_letters()
     for i, e in lettered:
         letter = next(letters)
         src, tgt = nodes[e.from_id], nodes[e.to_id]
@@ -524,22 +545,25 @@ def _route_all(model, nodes: Dict[str, NodeGeo], stickies: List[StickyGeo], lane
 
 
 # ================================================================== SVG
-def _node_svg(n: NodeGeo, overlay, pain_nodes, coverage) -> str:
+def _node_svg(n: NodeGeo, overlay, pain_nodes, coverage, marker: str | None = None) -> str:
     cx, cy = n.cx, n.cy
     out = []
+    gone = marker == "removed"
+    ink = REMOVED if gone else INK
+    dash_attr = ' stroke-dasharray="5,3"' if gone else ""
     if n.kind == "decision":
         w, h = n.w, n.h
         out.append(f'<polygon points="{cx},{cy-h/2} {cx+w/2},{cy} {cx},{cy+h/2} {cx-w/2},{cy}" '
-                   f'fill="#FFFFFF" stroke="{INK}" stroke-width="1.5"/>')
+                   f'fill="#FFFFFF" stroke="{ink}" stroke-width="1.5"{dash_attr}/>')
         lines = _wrap(n.label, 17, 3)
         y0 = cy - (len(lines) - 1) * 6.5 + 4
         for i, line in enumerate(lines):
-            out.append(_text(cx, y0 + i * 13, line, 10.5))
+            out.append(_text(cx, y0 + i * 13, line, 10.5, fill=ink))
         return "".join(out)
 
     if n.kind in ("start", "end"):
         sw = 1.5 if n.kind == "start" else 3.5
-        out.append(f'<circle cx="{cx}" cy="{cy}" r="{EV_R}" fill="#FFFFFF" stroke="{INK}" stroke-width="{sw}"/>')
+        out.append(f'<circle cx="{cx}" cy="{cy}" r="{EV_R}" fill="#FFFFFF" stroke="{ink}" stroke-width="{sw}"{dash_attr}/>')
         label = n.label if n.kind == "start" else n.label.replace("End: ", "")
         for i, line in enumerate(_wrap(label, 22, 2)):
             out.append(_text(cx, cy + EV_R + 13 + i * 12, line, 9.5, fill=GREY))
@@ -547,8 +571,15 @@ def _node_svg(n: NodeGeo, overlay, pain_nodes, coverage) -> str:
 
     fill = FILL[n.step_type] if overlay else "#FFFFFF"
     stroke = STROKE[n.step_type] if overlay else INK
+    if gone:
+        stroke = REMOVED
     out.append(f'<rect x="{cx-n.w/2}" y="{cy-n.h/2}" width="{n.w}" height="{n.h}" rx="7" '
-               f'fill="{fill}" stroke="{stroke}" stroke-width="1.5"/>')
+               f'fill="{fill}" stroke="{stroke}" stroke-width="1.5"{dash_attr}/>')
+    if marker == "agent":                                  # double border: a second outline just inside the first
+        out.append(f'<rect x="{cx-n.w/2+3}" y="{cy-n.h/2+3}" width="{n.w-6}" height="{n.h-6}" rx="5" '
+                   f'fill="none" stroke="{stroke}" stroke-width="1.2"/>')
+    elif marker in ("rules", "approval"):
+        out.append(_text(cx - n.w / 2 + 7, cy - n.h / 2 + 13, "⚙" if marker == "rules" else "✓", 11, "700", anchor="start"))
     if n.kind == "subprocess":
         bx, by = cx - 6, cy + n.h / 2 - 13
         out.append(f'<rect x="{bx}" y="{by}" width="12" height="12" fill="#fff" stroke="{stroke}" stroke-width="1.2"/>'
@@ -557,7 +588,7 @@ def _node_svg(n: NodeGeo, overlay, pain_nodes, coverage) -> str:
     lines = _wrap(n.label, 20, 2)
     y0 = cy - (len(lines) - 1) * 6.5 + 4 - (5 if n.kind == "subprocess" else 0)
     for i, line in enumerate(lines):
-        out.append(_text(cx, y0 + i * 13, line, 11))
+        out.append(_text(cx, y0 + i * 13, line, 11, fill=ink))
     if n.notes:
         out.append(_text(cx, cy + n.h / 2 + 12, _wrap(n.notes, 32, 1)[0], 8.5, fill=GREY, italic=True))
 
@@ -636,8 +667,9 @@ def _sticky_svg(x, y, text) -> str:
 
 def render_svg(model: ProcessModel, coverage: Dict[str, int] | None = None, title: str | None = None,
                overlay: bool = False, show_stickies: bool = True, show_tools: bool = True,
-               geometry: Geometry | None = None) -> str:
+               geometry: Geometry | None = None, markers: Dict[str, str] | None = None) -> str:
     coverage = coverage or {}
+    markers = markers or {}
     g = geometry or build_geometry(model, show_stickies=show_stickies, title=title, show_tools=show_tools)
     pain_nodes = {p.node_id for p in model.pain_points if p.node_id}
     width, height = g.width, g.height
@@ -655,12 +687,20 @@ def render_svg(model: ProcessModel, coverage: Dict[str, int] | None = None, titl
         items += [("CGS tool", "tag")]
         if any(not t.on_list for n in g.nodes.values() for t in n.tags):
             items += [("not on CGS tool list", "tag_off")]
+    if markers:
+        items += [("Rules step", "m_rules"), ("Agent step", "m_agent"), ("Approval step", "m_approval")]
+        if "removed" in markers.values():
+            items += [("Removed", "m_removed")]
     if overlay:
         items += [("judgment", "ov_j"), ("rule-based", "ov_d"), ("pain point", "pain")]
     for name, kind in items:
         y = 46
         if kind == "rect": s.append(f'<rect x="{lx}" y="{y-6}" width="16" height="12" rx="2" fill="#fff" stroke="{INK}"/>')
         elif kind == "diamond": s.append(f'<polygon points="{lx+8},{y-7} {lx+16},{y} {lx+8},{y+7} {lx},{y}" fill="#fff" stroke="{INK}"/>')
+        elif kind == "m_rules": s.append(f'<rect x="{lx}" y="{y-6}" width="16" height="12" rx="2" fill="#fff" stroke="{INK}"/>' + _text(lx+2, y+4, "⚙", 9, "700", anchor="start"))
+        elif kind == "m_approval": s.append(f'<rect x="{lx}" y="{y-6}" width="16" height="12" rx="2" fill="#fff" stroke="{INK}"/>' + _text(lx+2, y+4, "✓", 9, "700", anchor="start"))
+        elif kind == "m_agent": s.append(f'<rect x="{lx}" y="{y-6}" width="16" height="12" rx="2" fill="#fff" stroke="{INK}"/><rect x="{lx+2}" y="{y-4}" width="12" height="8" rx="1" fill="none" stroke="{INK}"/>')
+        elif kind == "m_removed": s.append(f'<rect x="{lx}" y="{y-6}" width="16" height="12" rx="2" fill="#fff" stroke="{REMOVED}" stroke-dasharray="3,2"/>')
         elif kind == "sub": s.append(f'<rect x="{lx}" y="{y-6}" width="16" height="12" rx="2" fill="#fff" stroke="{INK}"/>' + _text(lx+8, y+3, "+", 9, "700"))
         elif kind == "circ": s.append(f'<circle cx="{lx+8}" cy="{y}" r="6" fill="#fff" stroke="{INK}" stroke-width="2"/>')
         elif kind == "dash": s.append(f'<line x1="{lx}" y1="{y}" x2="{lx+16}" y2="{y}" stroke="{INK}" stroke-width="1.4" stroke-dasharray="4,3"/>')
@@ -692,7 +732,7 @@ def render_svg(model: ProcessModel, coverage: Dict[str, int] | None = None, titl
     for e in g.edges:
         s.append(_edge_svg(e))
     for n in g.nodes.values():
-        s.append(_node_svg(n, overlay, pain_nodes, coverage))
+        s.append(_node_svg(n, overlay, pain_nodes, coverage, markers.get(n.id)))
     for e in g.edges:
         s.append(_edge_label_svg(e))
     for st_ in g.stickies:
