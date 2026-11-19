@@ -199,20 +199,31 @@ def follow_up_groups(run: FrameworkRun, model: ProcessModel, dedupe: bool = True
     return groups
 
 
-def follow_ups_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None) -> str:
+def top_questions_heading(shown: int, total: int) -> str:
+    return f"Top {shown} of {total} open questions"
+
+
+def follow_ups_markdown(run: FrameworkRun, model: ProcessModel, names: list[str] | None = None,
+                        s=None, n: int = 10) -> str:
+    """The top `n` follow-up questions (framework/followups.py), the same list the screen shows."""
+    from framework.followups import ensure_top_questions
+    from framework.settings import load_settings
+
+    top = ensure_top_questions(run, model, s or load_settings(), names, n)
     out = ["# Follow-up questions\n"]
-
-    def line(f):
-        return f"- {f.question} (current: {f.current if f.current is not None else 'none'}; answer goes in `{f.path}`)"
-
-    groups = follow_up_groups(run, model)
-    if not groups:
+    if not run.follow_ups:
         out.append("None: every input has evidence or an answer.")
-    last = None
-    for section, title, items in groups:
-        if section != last:
-            out.append(f"\n## {section}\n")
-            last = section
-        out.append(f"\n### {title}\n")
-        out.extend(map(line, items))
+        return _clean("\n".join(out) + "\n", names)
+    out.append(f"{top_questions_heading(len(top), len(run.follow_ups))}: the ones whose answer could change "
+               "a call, a tier, a wave, readiness or the posture. The rest change no result.\n")
+    if not top:
+        out.append("None of the open questions can change a result.")
+    for i, q in enumerate(top, 1):
+        out.append(f"{i}. {q.question}")
+        if q.effect:
+            out.append(f"   - {q.effect}")
+        for p in q.paths:
+            cur = q.current.get(p)
+            label = f"{q.labels[p]} " if p in q.labels else ""
+            out.append(f"   - {label}(current: {cur if cur is not None else 'none'}; answer goes in `{p}`)")
     return _clean("\n".join(out) + "\n", names)

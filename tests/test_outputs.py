@@ -49,18 +49,15 @@ def test_names_removed(demo_model, acceptance_run):
     acceptance_run.summary_text = "Liz reviews it"
     out = summary_markdown(acceptance_run, demo_model, names=["Liz"])
     assert "Liz" not in out and "[team member]" in out
-    acceptance_run.follow_ups[0].question = "Does Elizabeth approve?"
-    assert "Elizabeth" not in follow_ups_markdown(acceptance_run, demo_model, names=["Elizabeth"])
-    assert "Liz" not in follow_ups_markdown(acceptance_run, demo_model, names=["Elizabeth"])
+    acceptance_run.steps["A1"].r_pass1["R1"].question = "Does Elizabeth approve?"
+    md = follow_ups_markdown(acceptance_run, demo_model, names=["Elizabeth"])
+    assert "Elizabeth" not in md and "Liz" not in md
 
 
-def test_follow_ups_process_first_and_deduped(demo_model, acceptance_run):
+def test_follow_ups_markdown_shows_the_top_ten(demo_model, acceptance_run):
     md = follow_ups_markdown(acceptance_run, demo_model)
-    assert md.index("## Start here") < md.index("### A1")
-    if "## Other steps" in md:
-        assert md.index("## Steps on the main path") < md.index("## Other steps")
-    qs = [l for l in md.splitlines() if l.startswith("- ")]
-    assert len(qs) == len(set(qs))
+    assert f"of {len(acceptance_run.follow_ups)} open questions" in md
+    assert len([l for l in md.splitlines() if l[:1].isdigit() and ". " in l[:4]]) <= 10
 
 
 def test_reason_uses_rule_that_fired_not_first_yes(demo_model, acceptance_run, settings):

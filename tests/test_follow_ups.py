@@ -25,7 +25,7 @@ def test_kept_step_with_no_r_yes_skips_r_move_and_combine_with(demo_model, all_a
     assert out.steps["A11"].call == "Keep"
     fams = _fams(out, "A11")
     assert "r_move" not in fams and "combine_with" not in fams
-    assert {"r_pass1", "worksheet", "dials", "tier1", "agent_test"} <= fams
+    assert {"r_pass1", "dials", "tier1", "agent_test"} <= fams and "worksheet" not in fams
 
 
 def test_r4_yes_asks_r_move_and_r3_or_r6_asks_combine_with(demo_model, all_assumed_run, settings):
@@ -50,7 +50,7 @@ def test_not_kept_step_skips_scoring_families(demo_model, all_assumed_run, setti
     assert out.steps["A3"].call == "Remove"
     fams = _fams(out, "A3")
     assert not fams & {"tier1", "dials", "agent_test", "readiness"}
-    assert {"r_pass1", "worksheet"} <= fams
+    assert "r_pass1" in fams and "worksheet" not in fams
 
 
 def test_made_unnecessary_step_skips_scoring_families(demo_model, acceptance_run, settings):
@@ -75,8 +75,6 @@ def test_follow_ups_main_path_steps_before_the_rest(demo_model, all_assumed_run,
             order.append(f.path.split(".")[1])
     on = [s for s in order if s in facts.main_path]
     assert order[:len(on)] == on
-    md = follow_ups_markdown(out, demo_model)
-    assert md.index("## Start here") < md.index("## Steps on the main path") < md.index("## Other steps")
 
 
 def test_answer_and_undo_pass_names_to_the_gate(demo_model, all_assumed_run, settings):

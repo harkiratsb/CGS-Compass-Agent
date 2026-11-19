@@ -59,18 +59,29 @@ def test_phase3_flow_with_a_run(live):
     assert isinstance(run, FrameworkRun) and run.map_reviewed and run.mode == "live"
     trace_len = len(run.trace)
 
-    # answer a follow-up (volume) through the form; rescoring adds no trace entries
-    path = "context.volume"
-    assert path in [f.path for f in run.follow_ups]
-    box = next(t for t in at.text_input if t.key.startswith(f"p3_fu_{path}_"))
-    box.input("40 per month")
+    # the follow-ups screen shows the top 10; answer the first one; rescoring adds no trace entries
+    assert any(f"of {len(run.follow_ups)} open questions" in m.value for m in at.markdown)
+    top = run.top_questions
+    assert 0 < len(top) <= 10
+    path = top[0].paths[0]
+    box = next(w for w in [*at.selectbox, *at.text_input] if w.key and w.key.startswith(f"p3_fu_{path}_"))
+    if hasattr(box, "options"):
+        box.set_value(box.options[0])
+    else:
+        box.input("40 per month")
     next(b for b in at.button if b.label == "Save answers").click().run()
     assert not at.exception and not _errors(at), _errors(at)
     after = at.session_state.framework
-    assert after.context["volume"].basis == "answered" and after.context["volume"].value == "40 per month"
+    from framework.models import get_answer
+    assert get_answer(after, path).basis == "answered"
     assert path not in [f.path for f in after.follow_ups]
     assert len(after.trace) == trace_len
     assert any("Saved 1 answer" in s.value for s in at.success)
+
+    # running the framework again (from the cache) keeps the answer
+    _run_button(at).click().run()
+    assert not at.exception and not _errors(at), _errors(at)
+    assert get_answer(at.session_state.framework, path).basis == "answered"
 
     # override a step answer on the Steps screen
     sid = at.selectbox(key="p3_step").value

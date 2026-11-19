@@ -15,7 +15,9 @@ import streamlit as st
 from framework.agent import framework_hash, run_framework
 from framework.future import build_future_model
 from framework.models import Answer, FrameworkRun, allowed_values
-from framework.outputs import follow_up_groups, follow_ups_markdown, step_table, step_table_csv, summary_markdown
+from framework.followups import ensure_top_questions
+from framework.outputs import (follow_ups_markdown, step_table, step_table_csv, summary_markdown,
+                               top_questions_heading)
 from framework.rules import _step_answers, _tier_label, answer_and_rescore, apply_rules, undo_answer
 from framework.settings import load_settings
 from handoff import _scrub
@@ -409,28 +411,34 @@ def _followups_screen(c: _Ctx):
     if run is None:
         return
     _show_msg("p3_msg_followups")
-    groups = follow_up_groups(run, c.model, dedupe=False)   # every answer path gets its own input
-    total = sum(len(items) for _, _, items in groups)
-    st.download_button("⬇ Download follow-ups (Markdown)", follow_ups_markdown(run, c.model, c.names),
+    top = ensure_top_questions(run, c.model, c.s, c.names)     # cached on the run; recomputed only on change
+    st.download_button("⬇ Download follow-ups (Markdown)", follow_ups_markdown(run, c.model, c.names, c.s),
                        file_name="follow_ups.md", mime="text/markdown", key="p3_dl_fu_top")
-    if not total:
+    if not run.follow_ups:
         st.success("No follow-up questions: every input that could change a result has evidence or an answer.")
         return
-    st.caption(f"{total} assumed inputs could change a result. Start with the process facts, then the steps on "
-               "the main path. Answer any of them and **Save answers**; blank ones are left as they are. "
-               "Saving rescores with code only — no AI call.")
+    st.markdown(f"**{top_questions_heading(len(top), len(run.follow_ups))}**")
+    if not top:
+        st.success("None of the open questions can change a call, tier, wave, readiness or the posture.")
+        return
+    st.caption("These are the questions whose answer could change a result, the biggest effect first. Answer any "
+               "of them and **Save answers**; blank ones are left as they are. Saving rescores with code only — "
+               "no AI call — and the list is worked out again.")
     ver = ss.get("p3_ver", 0)
     with st.form(f"p3_followups_{ver}"):
-        widgets, last = {}, None
-        for gi, (section, title, items) in enumerate(groups):
-            if section != last:
-                st.markdown(f"**{section}**")
-                last = section
-            with st.expander(f"{c.clean(title)} — {len(items)} questions", expanded=gi == 0):
-                for f in items:
-                    cur = "none" if f.current is None else c.clean(f.current)
-                    widgets[f.path] = _input(f.path, None, key=f"p3_fu_{f.path}_{ver}", blank=True,
-                                             label=f"{c.clean(f.question)} (now: {cur}, assumed)")
+        widgets = {}
+        for i, q in enumerate(top, 1):
+            st.markdown(f"**{i}. {c.clean(q.question)}**")
+            if q.effect:
+                st.caption(c.clean(q.effect))
+            cols = st.columns(min(len(q.paths), 3))
+            for j, p in enumerate(q.paths):
+                cur = q.current.get(p)
+                shown = "none" if cur is None else c.clean(cur)
+                label = c.clean(q.labels.get(p) or q.question)
+                with cols[j % len(cols)]:
+                    widgets[p] = _input(p, None, key=f"p3_fu_{p}_{ver}", blank=True,
+                                        label=f"{label} (now: {shown}, assumed)")
         if st.form_submit_button("Save answers", type="primary"):
             _apply(c, [(p, v) for p, v in widgets.items() if _changed(v, None)], "p3_msg_followups")
 
@@ -480,7 +488,7 @@ def _future_screen(c: _Ctx):
                          key="p3_dl_json")
     e[2].download_button("⬇ Summary (Markdown)", summary, file_name="summary.md", mime="text/markdown",
                          width="stretch", key="p3_dl_summary")
-    e[3].download_button("⬇ Follow-ups (Markdown)", follow_ups_markdown(run, c.model, c.names),
+    e[3].download_button("⬇ Follow-ups (Markdown)", follow_ups_markdown(run, c.model, c.names, c.s),
                          file_name="follow_ups.md", mime="text/markdown", width="stretch", key="p3_dl_fu")
     st.download_button("⬇ Full run (JSON)", c.clean(run.model_dump_json(indent=2)), file_name="framework_run.json",
                        mime="application/json", key="p3_dl_run")

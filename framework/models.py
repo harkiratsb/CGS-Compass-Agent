@@ -114,6 +114,16 @@ class FollowUp(BaseModel):
     current: Any = None
 
 
+class TopQuestion(BaseModel):
+    """One of the top follow-up questions: one or more answer paths asked together."""
+    question: str
+    paths: list[str]
+    labels: dict[str, str] = Field(default_factory=dict)    # path -> the member's own question
+    current: dict[str, Any] = Field(default_factory=dict)   # path -> value now
+    effect: str = ""                                        # what answering it could change
+    step_id: str | None = None
+
+
 class FrameworkRun(BaseModel):
     mode: Literal["live", "replay", "fixture"]
     map_reviewed: bool
@@ -129,6 +139,8 @@ class FrameworkRun(BaseModel):
     posture: list[str] = Field(default_factory=list)
     waves: dict[int, list[str]] = Field(default_factory=dict)
     follow_ups: list[FollowUp] = Field(default_factory=list)
+    top_questions: list[TopQuestion] = Field(default_factory=list)   # cache, see framework/followups.py
+    top_questions_key: str = ""                                      # the run state it was computed for
     summary_text: str = ""
     first_actions: list[str] = Field(default_factory=list)
     trace: list[AgentStep] = Field(default_factory=list)

@@ -338,9 +338,11 @@ def _r_yes(st: StepAssessment, k: str) -> bool:
 def _asks(st: StepAssessment, family: str) -> bool:
     """Whether a step's assumed answers in `family` are worth a follow-up question.
 
-    r_move only matters when R4 fired, combine_with only when R3 or R6 did, and the
+    Worksheet answers are never asked (no rule reads them); r_move only matters when R4 fired, combine_with only when R3 or R6 did, and the
     scoring families (tiers, dials, agent test, per-step readiness) only for a kept
     step (a step an Agent step makes unnecessary is a Remove)."""
+    if family == "worksheet":
+        return False                  # no rule reads the worksheet
     if family == "r_move":
         return _r_yes(st, "R4")
     if family == "combine_with":
