@@ -9,65 +9,39 @@ Two stages in one Streamlit app:
   **Rules**, an **Agent**, a **Human approval** or a **Human task**. Outputs a future-state diagram, a step table,
   a summary with expected impact, and the top 10 follow-up questions.
 
-## Quick start
+## Run it
 
-**You need:** Python **3.11 or newer** (tested on 3.14) and Git. An Anthropic API key is optional — without one the
-app replays recorded runs for the demo materials.
+Needs Python 3.11+. No API key needed for the demo.
 
 ```bash
 git clone https://github.com/harkiratsb/CGS-Compass-Agent.git
 cd CGS-Compass-Agent
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env               # then edit .env (optional, see below)
 streamlit run app.py
 ```
 
-The app opens at http://localhost:8501.
+Then, in the browser (http://localhost:8501):
 
-> PNG export uses `cairosvg`, which needs the Cairo system library (`brew install cairo` on macOS,
-> `apt install libcairo2` on Debian/Ubuntu). Everything else works without it; SVG and draw.io exports don't need it.
+1. Click **Load demo materials**, then **▶ Analyze process**.
+2. Switch to **Phase 3 · Future state** at the top and click **Run framework**.
 
-### Configure `.env`
+**Optional:** to run on your own files, copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`.
+Without a key, only the demo works (it replays recorded runs).
 
-| Variable | Needed? | What it does |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Optional | Turns on live AI runs for any materials you upload. Without it, only the demo materials work (recorded runs). |
-| `CGS_MODEL` | Optional | Model for extraction and the Phase 3 AI steps (default `claude-sonnet-5-5`). |
-| `CGS_REVIEW_MODEL` | Optional | Model for the independent verifier (default `claude-opus-5-5`). |
-| `GOOGLE_SERVICE_ACCOUNT_FILE`, `DRIVE_FOLDER_ID` | Optional | Import materials from a Google Drive folder via a service account (setup steps in `ingest/drive.py`). |
+**Tests:** `pip install -r requirements-dev.txt && pytest -q`
 
-### Try the demo (no API key needed)
+<details>
+<summary>More setup details</summary>
 
-1. In the sidebar, click **Load demo materials** (two sales-process transcripts), then **▶ Analyze process**.
-2. Review the current state: **Swimlane**, **Process model** (edit names, lanes, step types, sizing), **Pain points**.
-   Optionally tick **Mark map as reviewed**.
-3. Switch the view at the top to **Phase 3 · Future state** and click **Run framework**.
-4. Look through **Gate & context**, **Steps** (every answer with its quote, reason and confidence — you can override
-   any of them), **Follow-ups** (answer the top 10 questions; results update instantly, no AI call) and
-   **Future state** (diagram with *Show what changed*, summary, expected impact, downloads).
-5. **Save project** writes everything to a file you can reopen later with **Open project** in the sidebar.
+- **Optional `.env` settings:** `CGS_MODEL` (default `claude-sonnet-5-5`), `CGS_REVIEW_MODEL` (default
+  `claude-opus-5-5`), and `GOOGLE_SERVICE_ACCOUNT_FILE` / `DRIVE_FOLDER_ID` for Google Drive import (see `ingest/drive.py`).
+- **PNG export** needs the Cairo library (`brew install cairo` / `apt install libcairo2`). SVG and draw.io exports work without it.
+- **Live runs** are cached in `.cache/`. A live Phase 3 run takes about 10 minutes.
+  `python scripts/phase3_live_check.py` compares a live run with CGS's worked example; `--record` refreshes the demo replay.
+- **Save project** / **Open project** keep your edits and answers between sessions.
 
-### Live runs vs recorded runs
-
-| | Stage 1 | Phase 3 |
-|---|---|---|
-| With `ANTHROPIC_API_KEY` | Tick *Run agent live* to run the extraction agent on any upload. Cached in `.cache/`. | **Run framework** calls the AI for any map; **↻ Re-run AI steps** forces a fresh run. Cached in `.cache/`. |
-| Without a key | Demo transcripts load the recorded run `demo_data/agent_run_sales_process.json`. | The demo map loads the recorded run `demo_data/framework_run_sales_process.json`. Other maps show a clear "No API key" message. |
-
-A live Phase 3 run on the demo takes about 10 minutes. `python scripts/phase3_live_check.py` runs it and reports how
-close it gets to CGS's worked-example verdicts; `--record` refreshes the recorded run.
-
-### Run the tests
-
-```bash
-pip install -r requirements-dev.txt
-pytest -q
-```
-
-No API key or network needed: the AI is replaced by recorded or fake responses. The suite includes an acceptance test
-that checks the rules reach CGS's own worked-example verdicts on the demo process.
+</details>
 
 ## Phase 3 · How the framework runs
 
