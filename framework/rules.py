@@ -328,13 +328,13 @@ def _asks(st: StepAssessment, family: str) -> bool:
 
     r_move only matters when R4 fired, combine_with only when R3 or R6 did, and the
     scoring families (tiers, dials, agent test, per-step readiness) only for a kept
-    step that no Agent step makes unnecessary."""
+    step (a step an Agent step makes unnecessary is a Remove)."""
     if family == "r_move":
         return _r_yes(st, "R4")
     if family == "combine_with":
         return _r_yes(st, "R3") or _r_yes(st, "R6")
     if family in _SCORING_FAMILIES:
-        return st.call == "Keep" and not st.made_unnecessary_by
+        return st.call == "Keep"
     return True
 
 
@@ -388,6 +388,41 @@ def _uncap(a: Answer) -> None:
     a.flags = [f for f in a.flags if not f.startswith(_CAP_PREFIX)]
 
 
+def _node_name(model: ProcessModel, nid: str) -> str:
+    for a in model.activities:
+        if a.id == nid:
+            return a.name
+    for d in model.decisions:
+        if d.id == nid:
+            return d.question
+    return nid
+
+
+def _apply_agent_marks(run: FrameworkRun, ids: list[str], model: ProcessModel) -> None:
+    """Steps an Agent step makes unnecessary become a Remove (call_rule "Agent", wave 0).
+
+    The effective made_unnecessary_by is derived from ai_made_unnecessary_by on every pass, so an
+    answer that clears it and an undo that brings it back both work. A mark holds only while the
+    step's own call is Keep and the target is a kept Agent step that is not itself marked (mutual
+    pairs clear both)."""
+    for st in run.steps.values():
+        if st.made_unnecessary_by and not st.ai_made_unnecessary_by:   # runs saved before the split
+            st.ai_made_unnecessary_by = st.made_unnecessary_by
+        st.made_unnecessary_by = None
+    on_map = set(ids)
+    marked = {sid for sid in ids if run.steps[sid].ai_made_unnecessary_by}
+    for sid in marked:
+        st = run.steps[sid]
+        by = st.ai_made_unnecessary_by
+        target = run.steps.get(by)
+        if (by not in on_map or by in marked or target is None or target.tier is None
+                or target.tier.tier != "Agent" or target.call != "Keep" or st.call != "Keep"):
+            continue
+        st.made_unnecessary_by = by
+        st.call, st.call_rule, st.combine_target = "Remove", "Agent", None
+        st.recommendation = Recommendation(action=f"Remove (made unnecessary by {_node_name(model, by)})", wave=0)
+
+
 def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
                 names: list[str] | None = None) -> FrameworkRun:
     """The whole code pass. Pure: works on a deep copy and returns it."""
@@ -430,7 +465,6 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
     for sid in ids:
         st = run.steps[sid]
         st.call, st.combine_target = part2_call(st, facts, sid in decision_ids)
-    run.redesign_potential = redesign_potential([run.steps[i].call for i in ids], s)
 
     # Parts 3-5 (Low gate stops scoring)
     for sid in ids:
@@ -446,14 +480,8 @@ def apply_rules(run: FrameworkRun, model: ProcessModel, s: Settings,
                 and (sop is None or sop.value != "Y")):
             st.recommendation.action += "; Write the SOP"
 
-    # made_unnecessary_by holds only while the target is a kept Agent step that is not itself
-    # made unnecessary (checked against this pass's values, so mutual pairs clear both)
-    marked = {sid for sid, st in run.steps.items() if st.made_unnecessary_by}
-    for sid in marked:
-        st, target = run.steps[sid], run.steps.get(run.steps[sid].made_unnecessary_by)
-        if (target is None or target.tier is None or target.tier.tier != "Agent"
-                or target.call != "Keep" or st.made_unnecessary_by in marked):
-            st.made_unnecessary_by = None
+    _apply_agent_marks(run, ids, model)
+    run.redesign_potential = redesign_potential([run.steps[i].call for i in ids], s)
 
     run.posture = posture(run, facts)
     run.waves = waves(run)

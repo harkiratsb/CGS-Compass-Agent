@@ -48,7 +48,7 @@ def build_future_model(model: ProcessModel, run: FrameworkRun, show_removed: boo
         c = call_of(nid)
         st = run.steps.get(nid)
         bad_target = c == "Combine" and not (st and st.combine_target in order)
-        if c == "Remove" or bad_target or (st and st.made_unnecessary_by):
+        if c == "Remove" or bad_target:
             if show_removed:
                 markers[nid] = "removed"
             else:

@@ -48,9 +48,13 @@ def _lane(model: ProcessModel, facts, sid: str) -> str:
         return ""
 
 
-def _deciding(st: StepAssessment) -> tuple[str, str]:
+def _deciding(st: StepAssessment, model: ProcessModel | None = None) -> tuple[str, str]:
     """(reason, confidence) of the answer that decided the call."""
     gap = "Gap: no reason recorded"
+    if st.call_rule == "Agent" and st.made_unnecessary_by:
+        by = st.made_unnecessary_by
+        name = _step_label(model, by) if model is not None else by
+        return f"Made unnecessary by Agent step {by} ({name}), from the AI loop pass", "L"
     if st.call and st.call != "Keep":
         k = st.call_rule
         a = st.r_pass2.get(k) or st.r_pass1.get(k) if k else None
@@ -86,7 +90,7 @@ def step_table(run: FrameworkRun, model: ProcessModel, names: list[str] | None =
         else:
             tier_result = ("Standardize first → " if t.standardize_first else "") + _tier_label(t)
             chain = " → ".join(c.name for c in rec.chain) if rec else ""
-        reason, conf = _deciding(st)
+        reason, conf = _deciding(st, model)
         row = {"step_id": sid, "step": _step_label(model, sid), "lane": _lane(model, facts, sid),
                "call": st.call or "", "tier_result": tier_result, "future_chain": chain,
                "wave": rec.wave if rec and rec.wave is not None else "",

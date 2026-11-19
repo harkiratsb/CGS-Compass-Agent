@@ -477,7 +477,7 @@ def _loop_step(run, c, s):
     for sid, by in (mu.items() if isinstance(mu, dict) else []):
         agent = run.steps.get(by) if isinstance(by, str) else None
         if sid in run.steps and by != sid and agent and agent.tier and agent.tier.tier == "Agent":
-            run.steps[sid].made_unnecessary_by = by
+            run.steps[sid].ai_made_unnecessary_by = by
             groups += 1
     return out, run, f"{n} answers changed; {groups} steps made unnecessary by an Agent step"
 

@@ -76,8 +76,13 @@ def test_load_answers_sets_values_and_leaves_input(demo_model, tmp_path):
 
 
 def test_made_unnecessary_by_is_removed(demo_model, all_assumed_run, settings):
-    run = apply_rules(all_assumed_run, demo_model, settings)
-    run.steps["A5"].call, run.steps["A5"].made_unnecessary_by = "Keep", "A4"
+    from framework.models import Answer
+    run = all_assumed_run.model_copy(deep=True)
+    for k in ("A1", "A4"):
+        run.steps["A4"].agent_test[k] = Answer(value="Y", basis="answered")
+    run.steps["A5"].ai_made_unnecessary_by = "A4"
+    run = apply_rules(run, demo_model, settings)
+    assert run.steps["A5"].call == "Remove"          # the rules make it a Remove; the diagram has no special case
     fut, _ = build_future_model(demo_model, run)
     assert "A5" not in fut.node_ids() and not any(i.startswith("A5.") for i in fut.node_ids())
     assert fut.validate_graph() == []

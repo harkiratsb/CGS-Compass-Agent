@@ -97,7 +97,8 @@ class StepAssessment(BaseModel):
     recommendation: Recommendation | None = None
     specs: list[dict] = Field(default_factory=list)
     ai_chain: list[ChainStep] = Field(default_factory=list)   # set by the specs step; used while compatible
-    made_unnecessary_by: str | None = None
+    ai_made_unnecessary_by: str | None = None   # the loop pass's AI value; never changed by code
+    made_unnecessary_by: str | None = None      # effective mark, derived from the AI value every code pass
 
 
 class MapCheck(BaseModel):
