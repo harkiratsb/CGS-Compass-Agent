@@ -93,10 +93,22 @@ def yes(a: Answer | None) -> bool:
     return a is not None and a.value == "Y"
 
 
+def r_answer(step: StepAssessment, k: str) -> Answer | None:
+    """The R answer in force: a person's answer (pass 2, then pass 1) first, then an evidenced
+    pass-2 answer, else pass 1. An assumed pass-2 entry never shadows pass 1."""
+    p1, p2 = step.r_pass1.get(k), step.r_pass2.get(k)
+    for a in (p2, p1):
+        if a is not None and a.basis == "answered":
+            return a
+    if p2 is not None and p2.basis != "assumed":
+        return p2
+    return p1
+
+
 def part2_call(step: StepAssessment, facts: GraphFacts, is_decision: bool) -> tuple[Call, str | None]:
     """First matching rule R1..R7 decides the call; returns (call, combine_target).
 
-    Uses r_pass2[k] when present, else r_pass1[k]. Decision and accountability
+    Uses the R answer in force (see r_answer). Decision and accountability
     steps are protected: a Remove/Combine/Move becomes Keep, except when the
     matching rule is R2 (CGS's own example removes a decision-shaped CRM check).
 
@@ -107,7 +119,7 @@ def part2_call(step: StepAssessment, facts: GraphFacts, is_decision: bool) -> tu
     step.call_rule = None
 
     def hit(k: str) -> bool:
-        return yes(step.r_pass2.get(k) or step.r_pass1.get(k))
+        return yes(r_answer(step, k))
 
     combine_with = step.combine_with.value if step.combine_with else None
     call: Call = "Keep"
@@ -320,7 +332,7 @@ _SCORING_FAMILIES = ("tier1", "dials", "agent_test", "readiness")
 
 
 def _r_yes(st: StepAssessment, k: str) -> bool:
-    return yes(st.r_pass2.get(k) or st.r_pass1.get(k))
+    return yes(r_answer(st, k))
 
 
 def _asks(st: StepAssessment, family: str) -> bool:
@@ -560,6 +572,31 @@ def _put(container, key: str, is_attr: bool, answer: Answer | None) -> None:
         container.pop(key, None)
     else:
         container[key] = answer
+
+
+def answered_answers(run: FrameworkRun) -> dict[str, Answer]:
+    """{answer path: Answer} for every answer a person gave (basis answered)."""
+    out: dict[str, Answer] = {}
+    for fam in _RUN_FAMILIES:
+        for k, a in getattr(run, fam).items():
+            if a.basis == "answered":
+                out[f"{fam}.{k}"] = a
+    for sid, st in run.steps.items():
+        for suffix, a in _step_answers(st):
+            if a.basis == "answered":
+                out[f"steps.{sid}.{suffix}"] = a
+    return out
+
+
+def carry_answers(run: FrameworkRun, answers: dict[str, Answer]) -> None:
+    """Put a person's answers onto `run` (in place), history included. Paths that don't exist
+    on this run (a step no longer on the map) are skipped."""
+    for path, a in answers.items():
+        try:
+            container, key, is_attr = _locate(run, path)
+        except KeyError:
+            continue
+        _put(container, key, is_attr, a.model_copy(deep=True))
 
 
 def answer_and_rescore(run: FrameworkRun, model: ProcessModel, path: str, value: Any,

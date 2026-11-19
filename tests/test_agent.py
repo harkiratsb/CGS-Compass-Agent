@@ -312,3 +312,45 @@ def test_framework_hash_covers_names_locations_and_loop_passes(demo_model, setti
     assert base == framework_hash(demo_model, pf("a.md", "1"), changed)
     changed.loop.extra_passes = 3
     assert base != framework_hash(demo_model, pf("a.md", "1"), changed)
+
+
+# ------------------------------------------------------------- a person's answers survive a run (C1)
+
+def _answered_prior(demo_model, settings):
+    from framework.rules import answer_and_rescore
+    first = run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings)
+    prior = answer_and_rescore(first, demo_model, "context.outcome", "A signed SOW", settings)
+    prior = answer_and_rescore(prior, demo_model, "doc_gate.3", "N", settings)
+    prior = answer_and_rescore(prior, demo_model, "steps.D1.r_pass1.R2", "N", settings)
+    prior = answer_and_rescore(prior, demo_model, "steps.A7.dials.stakes", 5, settings)
+    return first, prior
+
+
+def _check_kept(run):
+    assert (run.context["outcome"].value, run.context["outcome"].basis) == ("A signed SOW", "answered")
+    assert (run.doc_gate["3"].value, run.doc_gate["3"].basis) == ("N", "answered")
+    assert run.steps["D1"].r_pass1["R2"].basis == "answered" and run.steps["D1"].call != "Remove"
+    assert run.steps["A7"].dials["stakes"].value == 5 and run.steps["A7"].tier.tier == "Human"
+    assert run.context["outcome"].history                 # undo still works
+    paths = {f.path for f in run.follow_ups}
+    assert not paths & {"context.outcome", "doc_gate.3", "steps.D1.r_pass1.R2", "steps.A7.dials.stakes"}
+
+
+def test_answers_survive_run_framework_from_the_cache(live, demo_model, settings, monkeypatch):
+    first, prior = _answered_prior(demo_model, settings)
+    assert first.steps["D1"].call == "Remove"
+    monkeypatch.setattr("framework.agent._call", lambda *a, **k: pytest.fail("cache should be used"))
+    _check_kept(run_framework(demo_model, [], map_reviewed=True, s=settings, prior=prior))
+
+
+def test_answers_survive_rerun_ai_steps_and_ai_output_is_ignored(monkeypatch, demo_model, settings):
+    fake = fake_call_from(FAKE)
+    monkeypatch.setattr("framework.agent._call", fake)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    _, prior = _answered_prior(demo_model, settings)
+    prompts = []
+    monkeypatch.setattr("framework.agent._call", lambda system, user, **k: prompts.append(user) or fake(system, user, **k))
+    run = run_framework(demo_model, [], map_reviewed=True, force_live=True, s=settings, prior=prior)
+    _check_kept(run)                     # the AI states doc_gate 3 = Y, outcome, D1 R2 = Y, and A7 dials
+    later = [u for u in prompts if u.startswith("[STEP:part2_context]")]
+    assert later and "A signed SOW" in later[0]          # prompts see the person's answers

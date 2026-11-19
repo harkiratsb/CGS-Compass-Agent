@@ -162,7 +162,7 @@ def _run_screen(c: _Ctx):
             try:
                 run = run_framework(c.model, ss.parsed, agent_run=ss.run, map_reviewed=bool(ss.get("map_reviewed")),
                                     success_end=prev.success_end if prev else None, force_live=again,
-                                    progress=on_step, s=c.s, names=c.names)
+                                    progress=on_step, s=c.s, names=c.names, prior=prev)
             except Exception as e:  # noqa: BLE001
                 failure = str(e)
                 status.update(label="Framework run failed", state="error", expanded=False)

@@ -28,7 +28,8 @@ if _env.exists():
 
 from framework.agent import DEMO_RUN, run_framework  # noqa: E402
 from framework.demo import demo_state  # noqa: E402
-from framework.models import FrameworkRun, StepAssessment  # noqa: E402
+from framework.models import R_KEYS, FrameworkRun, StepAssessment  # noqa: E402
+from framework.rules import r_answer  # noqa: E402
 from handoff import speaker_names  # noqa: E402
 
 
@@ -38,7 +39,8 @@ def _fmt(answers) -> str:
 
 def _deciding(st: StepAssessment) -> str:
     if st.call != "Keep":
-        r = st.r_pass2 or st.r_pass1
+        # the R answers in force (pass 2 where it overrides pass 1), so every key shows
+        r = {k: a for k in R_KEYS if (a := r_answer(st, k)) is not None}
         extra = f"; r_move={st.r_move.value}" if st.r_move else ""
         return f"call {st.call} by {st.call_rule or '-'}; R: {_fmt(r)}{extra}"
     t = st.tier

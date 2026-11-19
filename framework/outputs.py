@@ -10,7 +10,7 @@ import io
 
 from framework.graph import graph_facts
 from framework.models import R_KEYS, Answer, FrameworkRun, StepAssessment
-from framework.rules import _step_answers, _tier_label
+from framework.rules import _step_answers, _tier_label, r_answer
 from handoff import _scrub, with_nicknames
 from schema import ProcessModel
 
@@ -57,7 +57,7 @@ def _deciding(st: StepAssessment, model: ProcessModel | None = None) -> tuple[st
         return f"Made unnecessary by Agent step {by} ({name}), from the AI loop pass", "L"
     if st.call and st.call != "Keep":
         k = st.call_rule
-        a = st.r_pass2.get(k) or st.r_pass1.get(k) if k else None
+        a = r_answer(st, k) if k else None
         if k == "R4" and st.r_move is not None:
             a = st.r_move
         if a is None:

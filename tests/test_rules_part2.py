@@ -94,3 +94,18 @@ def test_pass2_overrides_pass1(demo_facts):
 def test_redesign_potential(non_keep, total, score, settings):
     calls = ["Remove"] * non_keep + ["Keep"] * (total - non_keep)
     assert redesign_potential(calls, settings) == score
+
+
+def test_assumed_pass2_entry_does_not_shadow_pass1(demo_facts):
+    st = _step(R1="Y")
+    st.r_pass2["R1"] = Answer(value="Unknown", basis="assumed")
+    assert part2_call(st, demo_facts, False)[0] == "Remove"
+    st.r_pass2["R1"] = _a("N")                              # an evidenced pass-2 answer does override
+    assert part2_call(st, demo_facts, False)[0] == "Keep"
+
+
+def test_a_persons_pass1_answer_beats_the_ai_pass2(demo_facts):
+    st = _step()
+    st.r_pass2["R1"] = _a("Y")
+    st.r_pass1["R1"] = Answer(value="N", basis="answered")
+    assert part2_call(st, demo_facts, False)[0] == "Keep"

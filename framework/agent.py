@@ -29,7 +29,7 @@ from framework.models import (
     DIAL_KEYS, R_KEYS, R_MOVE, READINESS_KEYS, SCORE, YN, YNU, YPN, Answer, ChainStep, FrameworkRun,
     MapCheck, assumed, blank_run, get_answer,
 )
-from framework.rules import _step_answers, apply_rules, chain_compatible
+from framework.rules import _step_answers, answered_answers, apply_rules, carry_answers, chain_compatible
 from framework.settings import Settings, load_settings
 from cgs_tools import tags_for
 from ingest import agent as _stage1
@@ -629,10 +629,14 @@ def _saved(key: str) -> FrameworkRun | None:
 def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: AgentRun | None = None,
                   map_reviewed: bool, success_end: str | None = None, force_live: bool = False,
                   progress: Callable[[AgentStep], None] | None = None, s: Settings | None = None,
-                  names: list[str] | None = None) -> FrameworkRun:
+                  names: list[str] | None = None, prior: FrameworkRun | None = None) -> FrameworkRun:
+    """Run (or load) the framework. Every answer a person gave on `prior` is kept: it is put on the
+    new run before any AI step (so prompts see it), put back after every AI step (so AI output for
+    that path is ignored) and kept through every code pass. A cached or replayed run gets them too."""
     progress = progress or (lambda st: None)
     s = s or load_settings()
     key = framework_hash(model, parsed, s)
+    carried = answered_answers(prior) if prior is not None else {}
     if not force_live:
         run = _saved(key)
         if run is not None:
@@ -640,6 +644,7 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
                 progress(st)
             run.map_reviewed = map_reviewed
             run.success_end = success_end or run.success_end
+            carry_answers(run, carried)
             return apply_rules(run, model, s, names)
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError(NO_KEY)
@@ -657,6 +662,7 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
         progress(st)
 
     run = blank_run(model, "live", s)
+    carry_answers(run, carried)
     run.map_reviewed = map_reviewed
     run.success_end = success_end or run.success_end
     facts = graph_facts(model, run.success_end)
@@ -678,6 +684,7 @@ def run_framework(model: ProcessModel, parsed: list[ParsedFile], *, agent_run: A
             failed = True
             record(name, agent, "llm", f"Failed ({str(e)[:120]}); answers stay at the framework defaults.",
                    model_name=model_name, status="warning", t0=t0)
+        carry_answers(run, carried)      # a person's answer always beats the AI's
         if rules:
             run = apply_rules(run, model, s, names)
 
