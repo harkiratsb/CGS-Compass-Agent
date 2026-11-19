@@ -1,13 +1,14 @@
 """Framework rules. Code makes every call; the AI never scores."""
 from __future__ import annotations
 
-from framework.graph import GraphFacts, graph_facts
+import math
 from typing import Any
 
+from framework.graph import GraphFacts, graph_facts
 from framework.models import (
-    A_KEYS, CONTEXT_KEYS, DIAL_KEYS, D_KEYS, GATE_KEYS, WORKSHEET_KEYS, _STEP_SINGLES, allowed_values,
-    READINESS_KEYS, R_KEYS, Answer, Call, ChainStep, FollowUp, FrameworkRun, Recommendation,
-    StepAssessment, TierResult,
+    A_KEYS, CONTEXT_KEYS, DIAL_KEYS, D_KEYS, GATE_KEYS, READINESS_KEYS, R_KEYS, WORKSHEET_KEYS,
+    _STEP_SINGLES, Answer, Call, ChainStep, FollowUp, FrameworkRun, Recommendation,
+    StepAssessment, TierResult, allowed_values,
 )
 from framework.settings import Settings
 from ingest.merge import source_coverage
@@ -484,9 +485,9 @@ def _clean_answer(path: str, value: Any) -> Any:
     if all(isinstance(a, int) for a in allowed):
         try:
             num = float(value.strip()) if isinstance(value, str) else float(value)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             raise bad
-        if num != int(num) or int(num) not in allowed:
+        if not math.isfinite(num) or num != int(num) or int(num) not in allowed:
             raise bad
         return int(num)
     if isinstance(value, str):
@@ -510,9 +511,9 @@ def answer_and_rescore(run: FrameworkRun, model: ProcessModel, path: str, value:
                        s: Settings, reason: str = "Answered in the app") -> FrameworkRun:
     """Record a person's answer (basis answered, confidence H), keep the old one in history,
     and re-run the rules. No AI call. The run passed in is never modified."""
-    value = _clean_answer(path, value)
     run = run.model_copy(deep=True)
     container, key, is_attr = _locate(run, path)
+    value = _clean_answer(path, value)
     old = getattr(container, key) if is_attr else container.get(key)
     if old is None:
         history = [{"absent": True}]

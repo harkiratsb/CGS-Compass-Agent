@@ -75,3 +75,21 @@ def test_unknown_paths(demo_model, base, settings):
             answer_and_rescore(base, demo_model, p, "5", settings)
     with pytest.raises(ValueError):
         undo_answer(base, demo_model, "context.volume", settings)
+
+
+def test_bad_path_reported_before_bad_value(demo_model, base, settings):
+    with pytest.raises(KeyError):
+        answer_and_rescore(base, demo_model, "steps.ZZ.dials.stakes", "10", settings)
+    for p in ["steps.A2.bogus.x", "context.nope", "steps.A2.dials.nope"]:
+        with pytest.raises(KeyError):
+            answer_and_rescore(base, demo_model, p, "5", settings)
+        with pytest.raises(KeyError):
+            undo_answer(base, demo_model, p, settings)
+    with pytest.raises(KeyError):
+        undo_answer(base, demo_model, "steps.ZZ.dials.stakes", settings)
+
+
+def test_non_finite_and_huge_rejected(demo_model, base, settings):
+    for bad in ["nan", "inf", float("inf"), float("nan"), 10 ** 400]:
+        with pytest.raises(ValueError, match="Choose one of"):
+            answer_and_rescore(base, demo_model, "steps.A11.dials.stakes", bad, settings)
